@@ -616,57 +616,17 @@ a~som si plne vedom%
 %
 \newcommand\prohlasenitext@english%
 {%
-  \par\noindent
-  I~declare that I~have written my thesis independently, under the guidance of the advisor
-  and using exclusively the technical references and other sources of information cited
-  in the thesis and listed in the comprehensive bibliography at the end of the thesis.
-  %In connection with the creation of the thesis,
-  I have not violated the principles and recommendations of the Brno University of Technology regarding the use of generative artificial intelligence. 
-
-  \vspace{1em}%
-  \par\noindent%
-    As the author,
-    %of the
-  %\ifcase\akt@type\relax
-       %type@semestral
-    %semestral project
-  %\or %type@bachelor
-    %bachelor's thesis
-  %\or %type@diploma
-    %master's thesis
-  %\or %type@treatise
-    %treatise on doctoral thesis
-  %\or %type@phd
-    %doctoral thesis
-  %\fi
-  I~furthermore declare that, with respect to the creation of this
-  %as regards the creation of this
-  thesis,
-  I~have not infringed any copyright
-  or violated anyone's personal and/or ownership rights.
-  %In particular, I~have not unlawfully encroached on anyone's personal
-  %and/or ownership rights and
-  In this context,
-  I~am fully aware of the consequences
-  %in the case
-  of breaking Regulation~$\S$\,11
-  of the Copyright Act No.\,121/2000 Coll.\ of the Czech Republic,
-  %and the following of the Copyright Act No\,121/2000 Sb.\ of the Czech Republic,
-  as amended,
-  %and of the rights related to intellectual property right and changes in some Acts (Intellectual Property Act)
-  %and formulated in later regulations, inclusive of the possible consequences resulting from the provisions of
-  %Criminal Act No\,40/2009 Sb.\ of the Czech Republic, Section 2, Head VI, Part 4.
-  and of any breach of rights related to intellectual property or introduced within amendments to relevant Acts
-  such as the Intellectual Property Act or the Criminal Code, Act No.\,40/2009 Coll.\ of the Czech Republic, Section 2, Head VI, Part 4.
+    Ich versichere, dass ich diese Arbeit selbstständig verfasst habe und keine anderen
+    als die angegebenen Quellen und Hilfsmittel benutzt habe.
 }%
 
 %% Vychozi nazev skoly v pouzitych jazycich
 \iflanguage{english}{
-	\newcommand\university@orig@lang{Brno University of Technology}
-	\newcommand\university@tran@lang{Vysok\'{e} u\v{c}en\'{\i} technick\'{e} v~Brn\v{e}}
+	\newcommand\university@orig@lang{Heidelberg University}
+	\newcommand\university@tran@lang{Universität Heidelberg}
 }{
-	\newcommand\university@orig@lang{Vysok\'{e} u\v{c}en\'{\i} technick\'{e} v~Brn\v{e}}
-	\newcommand\university@tran@lang{Brno University of Technology}
+	\newcommand\university@orig@lang{Universität Heidelberg}
+	\newcommand\university@tran@lang{Heidelberg University}
 }
 
 %% Vychozi obrazovy soubor s logem skoly
@@ -1087,7 +1047,7 @@ a~som si plne vedom%
     \addto\captionsenglish{\renewcommand\tablename{Table}}
     \addto\captionsenglish{\renewcommand\citace@stran{p}}
     \addto\captionsenglish{\renewcommand\oborstudiatext{Specialization of Study}}
-    \addto\captionsenglish{\renewcommand\oznaceniprohlaseni{Author's Declaration}}
+    \addto\captionsenglish{\renewcommand\oznaceniprohlaseni{Erklärung}}
     \addto\captionsenglish{\renewcommand\prohlaseni@autor{Author}}
     \addto\captionsenglish{\renewcommand\prohlaseni@butid{Author's ID}}
     \addto\captionsenglish{\renewcommand\prohlaseni@paper{Paper type}}
@@ -1095,7 +1055,7 @@ a~som si plne vedom%
     \addto\captionsenglish{\renewcommand\prohlaseni@rok{Academic year}}
     \addto\captionsenglish{\renewcommand\prohlaseni@nazev{Topic}}
     \addto\captionsenglish{\renewcommand\prohlaseni@poznamka{The author signs only in the printed version.}}
-    \addto\captionsenglish{\renewcommand\oznacenipodpisu{author's signature}}
+    \addto\captionsenglish{\renewcommand\oznacenipodpisu{Unterschrift}}
     \addto\captionsenglish{\renewcommand\oznacenipodekovani{Acknowledgement}}
     \addto\captionsenglish{\renewcommand\thesisadvertisment{%
 		Typeset by the \texttt{thesis} package, version \version@thesis ;
@@ -1554,37 +1514,36 @@ a~som si plne vedom%
     \begin{minipage}[t][274mm]{\linewidth}%
       \centering
       \noindent
-      \parbox[t][26mm][t]{\linewidth}{%%%
-        \centering\sffamily \huge
-        \MakeUppercase{\university@orig@lang}
+      \parbox[t][16mm][t]{\linewidth}{%%%
+        \centering\sffamily \LARGE
+        \faculty@orig@lang
       }%%%
 
       \noindent
       \parbox[t][16mm][t]{0.7\linewidth}{%%%
         \centering
-        \sffamily \huge
-        \faculty@orig@lang
+        \sffamily \LARGE
+        \university@orig@lang
       }%%%
 
-      \vskip 0mm plus 1fill
+      \vskip 0mm plus 1fill 
       \noindent
-      \parbox[t][17mm][t]{\linewidth}{%%%
+      \parbox[t][100mm][s]{\linewidth}{%%%
         \centering
-        \sffamily\huge \MakeUppercase{\csname oznaceniprace@\orig@lang\endcsname}
+        \setstretch{1.5}
+        \sffamily \LARGE \csname oznaceniprace@\orig@lang\endcsname
+
+        in Computer Engineering
+
+        submitted by
+
+        \@Autor
+
+        born in Šumperk, Czech Republic
+
+        \@grade
       }%%%
 
-      \vskip 0mm plus 1fill
-
-      \noindent
-      \parbox[t][32mm][t]{\linewidth}{%%%
-        %\raggedright
-        \sffamily \Large
-        %\makebox[62mm][l]{\MakeUppercase{\csname autortext@\orig@lang\endcsname}}%
-        \mbox{\@city,\ \@grade}\hfill\@Autor
-        %\sffamily \normalsize
-        %\MakeUppercase{\csname autortext@\tran@lang\endcsname}%
-      }%%%
-      %
     \end{minipage}%
 %      \end{center}
   }%%
@@ -2029,14 +1988,14 @@ a~som si plne vedom%
       \Large\textbf{\oznaceniprohlaseni}%
     \end{center}%
 
-	\vspace{3em}%
-	\begin{tabular}{p{55mm}p{70mm}}
-		\bfseries\prohlaseni@autor{}: & \@autor \\[1em]
-		\bfseries \prohlaseni@butid{}: & \but@id \\[1em]
-		\bfseries \prohlaseni@paper{}: & \csname oznaceniprace@\orig@lang\endcsname \\[1em]
-		\bfseries \prohlaseni@rok{}:	  & \academic@year \\[1em]
-		\bfseries \prohlaseni@nazev{}: & \title@orig@lang
-	\end{tabular}
+	% \vspace{3em}%
+	% \begin{tabular}{p{55mm}p{70mm}}
+	% 	\bfseries\prohlaseni@autor{}: & \@autor \\[1em]
+	% 	\bfseries \prohlaseni@butid{}: & \but@id \\[1em]
+	% 	\bfseries \prohlaseni@paper{}: & \csname oznaceniprace@\orig@lang\endcsname \\[1em]
+	% 	\bfseries \prohlaseni@rok{}:	  & \academic@year \\[1em]
+	% 	\bfseries \prohlaseni@nazev{}: & \title@orig@lang
+	% \end{tabular}
 
     \vspace{4em}%
     \noindent
@@ -2048,12 +2007,12 @@ a~som si plne vedom%
     \begin{tabular}{lc}
     	\mistoprohlaseni\hspace{1em}\makebox[8em][c]{\dotfill}\hspace{5em} &
     	\dotfill \\
-    	& \oznacenipodpisu\begin{NoHyper}\footnotemark\end{NoHyper} \\
+    	& \oznacenipodpisu \\
     	& \rule{15em}{0pt}
     \end{tabular}
     \end{center}
 
-    \footnotetext{\prohlaseni@poznamka}
+    % \footnotetext{\prohlaseni@poznamka}
 }
 
 %\endinput
