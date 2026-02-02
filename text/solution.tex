@@ -1,6 +1,61 @@
-\chapter{Theory}
+\chapter{PCI Express}
 
-Theoretical background of the thesis comes now, suitably split into chapters and sections.
+The \ac{PCIe} is the interconnect standard that emerged in 2003 from the \ac{PCI} standard. The
+\ac{PCIe} addressed the drawbacks of the \ac{PCI} that became increasingly challenging when more
+devices and more throughput were required. These include:
 
-(The structure suggested in this template is the coarsest one.
-Please discuss your particular structure with your adviser.)
+\begin{itemize}
+        \item Shared-bus topology that, inspite of its simplicity, was rendered unscalable since with
+        increasing amount of devices, the bus gets longer which weakens the signal for the farthest
+        device.
+        \item Common clock which does not fit well with parallel data transmission model especially
+        when lane skew takes place, meaning the bits of data travel unevenly fast over the wires.
+        \item Half-duplex communication allows only one device to communicate at one point at a
+        time.
+        \item Reflected-wave signaling which was used to reduce the power consumption on the bus.
+        This uses an interference of the sent wave from the master (which had driven the signal to
+        the lower voltage than needed for the digital circuits on the bus) and its reflection that
+        originated on the end of a bus (there is no termination on the bus' end). By the addition of
+        these two waves, the signal reaches the required voltage level for the digital circuits (W:
+        cite PCIe book).
+\end{itemize}
+
+% TODO: Add picture of PCI topology with some functions and one PCI-to-PCI bridge.
+
+The PCI protocol did not keep pace with increasing demand of computer peripheral communication
+structures and needed to be changed. The PCI Express protocol significantly changed the strategy for
+both the communication topology and the physical properties of the interconnect. 
+
+The basic architecture is shown in Fig. XXX (host topology). Connections are implemented as
+point-to-point links between ports on different device types organized in a tree. The center of the
+topology is the \ac{RC}, which provides \emph{Root Ports}. Each device communicating over the
+infrastructure (such as today's GPU/FPGA accelerators) is called \emph{Function} and is the major
+source of traffic within the system\footnotemark. Each Function contains an \emph{Upstream port} for exchanging
+data. Since the number of Root Ports is limited by the processor's interconnect, fan-out is provided
+by \emph{PCIe Switches}, which supply multiple \emph{Downstream ports} and a single Upstream
+port. Each port supports full-duplex communication and introduces asynchronous clocking model.
+Using this model significantly improves the possible throughput of the interconnect where clock gets
+reconstructed from the patterns in the incoming data on the receiving port. Using Switches, the
+number of devices can be increased arbitrarily, making PCIe a switched network (W: cite PCIe spec).
+Although the PCIe specification introduces many advanced features, this thesis presents only the
+necessary ones for its purposes. 
+
+\footnotetext{
+    The PCIe specification (with concordance to the PCI) defines three System elements to identify
+    its devices, namely \emph{Bus}, \emph{Device} and \emph{Function}. Every point-to-point
+    connection in the topology makes a separate Bus. The Device identifier stays as a remnant of the PCI
+    standard and every Bus contains only one. Within each Device, one or multiple Functions can be
+    present. The Function is basically and adressable entity in the configuration space where
+    \emph{Endpoint} is the most important type of a Function. Using the term `device' in this thesis
+    will refer to a single-function device in the PCIe topology.
+  }
+
+% NOTE: Maybe mention BDF identifier if necessary
+
+\section{Communication model}
+
+\section{Link configuration}
+
+\section{Device configuration}
+
+\section{Peer-to-peer transfer}

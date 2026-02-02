@@ -117,3 +117,208 @@
   Month                    = {June},
 }
 
+@inproceedings{neugeb,
+author = {Neugebauer, Rolf and Antichi, Gianni and Zazo, Jos\'{e} Fernando and Audzevich, Yury and L\'{o}pez-Buedo, Sergio and Moore, Andrew W.},
+title = {Understanding PCIe Performance for End Host Networking},
+year = {2018},
+isbn = {9781450355674},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3230543.3230560},
+doi = {10.1145/3230543.3230560},
+abstract = {In recent years, spurred on by the development and availability of programmable NICs, end hosts have increasingly become the enforcement point for core network functions such as load balancing, congestion control, and application specific network offloads. However, implementing custom designs on programmable NICs is not easy: many potential bottlenecks can impact performance.This paper focuses on the performance implication of PCIe, the de-facto I/O interconnect in contemporary servers, when interacting with the host architecture and device drivers. We present a theoretical model for PCIe and pcie-bench, an open-source suite, that allows developers to gain an accurate and deep understanding of the PCIe substrate. Using pcie-bench, we characterize the PCIe subsystem in modern servers. We highlight surprising differences in PCIe implementations, evaluate the undesirable impact of PCIe features such as IOMMUs, and show the practical limits for common network cards operating at 40Gb/s and beyond. Furthermore, through pcie-bench we gained insights which guided software and future hardware architectures for both commercial and research oriented network cards and DMA engines.},
+booktitle = {Proceedings of the 2018 Conference of the ACM Special Interest Group on Data Communication},
+pages = {327–341},
+numpages = {15},
+keywords = {PCIe, reconfigurable hardware, operating system},
+location = {Budapest, Hungary},
+series = {SIGCOMM '18}
+}
+
+@online{intel_burst,
+author = {Intel Corporation},
+title = {How to Implement a 64B PCIe Burst Transfer on Intel Architecture},
+url  = {https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/pcie-burst-transfer-paper.pdf},
+addendum = {(accessed: 23.10.2025)},
+keywords = {AVX, burst, Intel CPU}
+}
+
+@online{nvidia_ampere,
+author = {Nvidia Corporation},
+title = {NVIDIA Ampere Architecture In-Depth},
+url  = {https://developer.nvidia.com/blog/nvidia-ampere-architecture-in-depth/},
+addendum = {(accessed: 23.10.2025)},
+keywords = {NVIDIA,Ampere,architecture,GPU}
+}
+
+@online{nvme_overview,
+author = {NVM Express, Inc},
+title = {NVMe Overview},
+url  = {https://nvmexpress.org/wp-content/uploads/NVMe_Overview.pdf},
+addendum = {(accessed: 23.10.2025)},
+keywords = {NVMe, SATA, PCI Express, M.2}
+}
+
+@online{connectx_nics,
+author = {Nvidia Corporation},
+title = {ConnectX NICs},
+url  = {https://www.nvidia.com/de-de/networking/ethernet-adapters/},
+addendum = {(accessed: 23.10.2025)},
+keywords = {NVIDIA,NIC, SmartNIC}
+}
+
+@online{amd_alveo_accels,
+author = {AMD, Inc.},
+title = {AMD Alveo Adaptable Accelerator Cards},
+url  = {https://www.amd.com/en/products/accelerators/alveo.html},
+addendum = {(accessed: 23.10.2025)},
+keywords = {FPGA, ACAP, accelerator, data center}
+}
+
+@online{pcie_spec_list,
+author = {PCI-SIG},
+title = {Specifications},
+url  = {https://pcisig.com/specifications?field_technology_value%5B%5D=express&field_document_type_value%5B%5D=specification&speclib=},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCI Express, PCIe, specification}
+}
+
+@book{pcie_book,
+title = {PCI Express Technology},
+author = {Mike Jackson, Ravi Budruk},
+isbn = {978-0-9836465-2-5},
+year = {2012},
+publisher = {Mindshare, Inc.},
+keywords = {PCI Express, TLP, Ordered Set, transaction, Root Complex}
+}
+
+@reference{pcie_spec,
+title = {PCI Express Base Specification},
+edition = {Revision 4.0, Version 1.0},
+author = {PCI-SIG},
+year = {2017},
+publisher = {PCI-SIG},
+keywords = {PCI Express, TLP, Ordered Set, transaction, Root Complex, specification}
+}
+
+@online{calypte_github,
+author = {Vladislav Válek, Martin Špinler, Jakub Cabal},
+title = {DMA Calypte},
+url  = {https://cesnet.github.io/ndk-fpga/devel/comp/dma/dma_calypte/readme.html},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCI Express, DMA engine, NDK-FPGA}
+}
+
+@online{iommu,
+author = {Mike Anderson},
+title = {The IOMMU Impact: I/O Memory Management Units},
+url  = {https://medium.com/@mike.anderson007/the-iommu-impact-i-o-memory-management-units-feb7ea95b819},
+addendum = {(accessed: 23.10.2025)},
+keywords = {IOMMU, I/O, DMA}
+}
+
+@online{pcie_acs,
+author = {Red Hat Virtualization Documentation Team},
+title = {Hardware Considerations for Implementing SR-IOV},
+url  = {https://docs.redhat.com/de/documentation/red_hat_virtualization/4.2/html/hardware_considerations_for_implementing_sr-iov/index},
+addendum = {(accessed: 23.10.2025)},
+keywords = {SR-IOV, PCIe, ACS, IOMMU}
+}
+
+@online{pcie_forms,
+author = {Al Yanes},
+title = {An Introduction to Form Factors for PCI Express},
+url  = {https://pcisig.com/introduction-form-factors-pci-express%C2%AE},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCIe, CEM, M.2, U.2}
+}
+
+@online{pcie_cem_conns,
+author = {Wikimedia Commons},
+title = {Example of PCI-E x4, x16, x1 and 2nd x16},
+url  = {https://commons.wikimedia.org/wiki/File:PCI-E_%26_PCI_slots_on_DFI_LanParty_nF4_SLI-DR_20050531.jpg},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCIe, CEM, motherboard}
+}
+
+@manual{pcie_amd_ip,
+author = {Advanced Micro Devices, Inc.},
+title = {UltraScale+ Devices Integrated Block for PCI Express v1.3},
+year = {2025},
+edition = {Product Guide},
+url  = {https://docs.amd.com/viewer/book-attachment/tCJDwogjyJ9_CE2Q_px23A/V1qgleVOyfTzj42ioh4SWw-tCJDwogjyJ9_CE2Q_px23A},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCIe, UltraScale+, Endpoint}
+}
+
+@manual{intel_ptile,
+author = {Altera, Inc.},
+title = {P-Tile Avalon® Streaming FPGA IP for PCI Express User Guide},
+year = {2025},
+version = {9.3.0},
+url  = {https://www.intel.com/content/www/us/en/docs/programmable/683059/25-1-1/about-the-p-tile-fpga-ips-for-pci-express.html},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCIe, P-Tile, Endpoint, Agilex, Stratix}
+}
+
+@manual{intel_rtile,
+author = {Altera, Inc.},
+title = {R-Tile Avalon® Streaming FPGA IP for PCI Express User Guide},
+year = {2025},
+version = {12.0.0},
+url  = {https://www.intel.com/content/www/us/en/docs/programmable/683501/25-1-1/about-the-r-tile-streaming-fpga-ip-for.html},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCIe, R-Tile, Endpoint, Agilex, Stratix}
+}
+
+@online{ndk_fpga_github,
+author = {CESNET,a.l.e.},
+title = {Network Development Kit (NDK) for FPGA cards},
+url  = {https://github.com/CESNET/ndk-fpga},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCI Express, DMA engine, NDK-FPGA, SmartNIC}
+}
+
+@online{ndk_mfb_spec,
+author = {CESNET,a.l.e.},
+title = {MFB specification},
+url  = {https://cesnet.github.io/ndk-fpga/devel/comp/mfb_tools/readme.html},
+addendum = {(accessed: 23.10.2025)},
+keywords = {NDK-FPGA, Multi-Frame Bus, MFB, streaming bus, streaming interface}
+}
+
+@online{ndk_mi_spec,
+author = {CESNET,a.l.e.},
+title = {MI bus specification},
+url  = {https://cesnet.github.io/ndk-fpga/devel/comp/mi_tools/readme.html},
+addendum = {(accessed: 23.10.2025)},
+keywords = {NDK-FPGA, memory-mapped interface, MI}
+}
+
+@online{axis_spec,
+author = {ARM Limited},
+title = {AMBA® AXI-Stream Protocol Specification},
+url  = {https://developer.arm.com/documentation/ihi0051/latest/},
+addendum = {(accessed: 23.10.2025)},
+keywords = {AMBA, AXI-Stream}
+}
+
+@manual{alveo_u55c,
+author = {Advanced Micro Devices, Inc.},
+title = {Alveo U55C Data Center Accelerator Cards Data Sheet (DS978)},
+year = {2023},
+version = {1.3},
+url  = {https://docs.amd.com/viewer/book-attachment/jBy7Lf0ukySp4TFAfKhJJQ/aj6Aw4v67dCW~TvHEOe5UQ-jBy7Lf0ukySp4TFAfKhJJQ},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCIe, AMD Alveo, Alveo, FPGA}
+}
+
+@manual{alveo_u200,
+author = {Advanced Micro Devices, Inc.},
+title = {Alveo U200 and U250 Data Center Accelerator Cards Data Sheet (DS962)},
+year = {2023},
+version = {1.7},
+url  = {https://docs.amd.com/viewer/book-attachment/4ywwOFovRpVKdb465_9JxA/nTGBl862I~S01cI5WdM3QA-4ywwOFovRpVKdb465_9JxA},
+addendum = {(accessed: 23.10.2025)},
+keywords = {PCIe, AMD Alveo, Alveo, FPGA}
+}

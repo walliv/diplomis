@@ -1504,7 +1504,7 @@ a~som si plne vedom%
 
 
 \def\@vytvorobalku@vut{%
-  \renewcommand{\baselinestretch}{1.0}%
+  \renewcommand{\baselinestretch}{1.5}%
   \newpage
   \thispagestyle{empty}%
   \begin{hyphenrules}{nohyphenation}
@@ -1530,10 +1530,9 @@ a~som si plne vedom%
       \noindent
       \parbox[t][100mm][s]{\linewidth}{%%%
         \centering
-        \setstretch{1.5}
         \sffamily \LARGE \csname oznaceniprace@\orig@lang\endcsname
 
-        in Computer Engineering
+        in \specialization@orig@lang
 
         submitted by
 
@@ -1665,91 +1664,31 @@ a~som si plne vedom%
 }%
 
 \def\@vytvortitulku@vut{%
-\renewcommand\baselinestretch{1.0}
+\renewcommand\baselinestretch{1.5}
 \newpage
 \thispagestyle{empty}
 \begin{hyphenrules}{nohyphenation}
-\parindent=0pt
-\raggedright
 
-\includegraphics*[trim={32pt 32pt 32pt 32pt},width=42mm,height=42mm,keepaspectratio]{\logo@skola}
-% Mezery nize mozno upravit - tyto jsou nastaveny tak, aby se i pri triradkovem nazvu
-% prace a dvouradkovem nazvu ustavu vysazel posledni radek na spravnou stranu
-\Vutska
+\noindent\centering
+\Vutskb%
 
-\Vutbig{\MakeUppercase{\university@orig@lang}\hfil}\par
-\ifx\lang@study\lang@czech
-\Vutsub{\foreignlanguage{\tran@lang}{\MakeUppercase{\university@tran@lang}}}
-\fi
-\Vutskc
-   \Vutmid{\MakeUppercase{\faculty@orig@lang}}\par
-   \ifx\lang@study\lang@czech
-   \Vutsub{\foreignlanguage{\tran@lang}{\MakeUppercase{\faculty@tran@lang}}}
-   \fi
+\vspace*{10em}
 
-   \Vutskc
+\Vutbig\Title@orig@lang\par
 
-   \Vutmid\Department@orig@lang\par
-   \ifx\lang@study\lang@czech
-   \Vutsub{\foreignlanguage{\tran@lang}{\Department@tran@lang}}
-   \fi
-   
-\Vutskb
+\Vutskd%
 
-\Vutlar\Title@orig@lang\par
-\ifx\lang@study\lang@czech
-\Vutsub{\foreignlanguage{\tran@lang}{\Title@tran@lang}}
-\fi
+\Vutmid{
+    This {\csname oznaceniprace@\orig@lang\endcsname} has been carried out by \@autor\hss
 
-\Vutskd
+    at the
 
-\Vutsmall{\MakeUppercase{\csname oznaceniprace@\orig@lang\endcsname}}\par
-\ifx\lang@study\lang@czech
-\Vutsub{\foreignlanguage{\tran@lang}{\MakeUppercase{\csname oznaceniprace@\tran@lang\endcsname}}}
-\fi
+    \department@orig@lang
 
-\Vutske
+    under the supervision of
 
-% troska rozhodovani jak vytisknout autora a suprevizora
-\setbox1=\hbox{\Vutsmall\@autor}
-\setbox2=\hbox{\Vutsmall\foreignlanguage{\tran@lang}{\@vedouci}}
-\dimen0=\textwidth
-\advance\dimen0 by -70mm%
-\ifdim\wd1>\wd2
-   \dimen1=\wd1
-\else
-   \dimen1=\wd2
-\fi
-\ifdim\dimen0<\dimen1
-   % nevejde se mi tam jmeno autora nebo vedouciho protoze je moc dlouhe
-   \Vutsmall{\MakeUppercase{\csname autortext@\orig@lang\endcsname}\hfill\hbox to \dimen1{\@autor\hss}}\par
-   \ifx\lang@study\lang@czech
-   \Vutsub{\foreignlanguage{\tran@lang}{\MakeUppercase{\csname autortext@\tran@lang\endcsname}}}
-   \fi
-
-   \Vutske
-
-   \Vutsmall{\MakeUppercase{\csname vedoucitext@\orig@lang\endcsname}\hfill\hbox to \dimen1{\@vedouci\hss}}\par
-   \ifx\lang@study\lang@czech
-   \Vutsub{\foreignlanguage{\tran@lang}{\MakeUppercase{\csname vedoucitext@\tran@lang\endcsname}}}
-   \fi
-\else
-   \Vutsmall{\makebox[70mm][l]{\MakeUppercase{\csname autortext@\orig@lang\endcsname}}\@autor}\par
-   \ifx\lang@study\lang@czech
-   \Vutsub{\foreignlanguage{\tran@lang}{\MakeUppercase{\csname autortext@\tran@lang\endcsname}}}
-   \fi
-
-   \Vutske
-
-   \Vutsmall{\makebox[70mm][l]{\MakeUppercase{\csname vedoucitext@\orig@lang\endcsname}\hss}\@vedouci\hss}\par
-   \ifx\lang@study\lang@czech
-   \Vutsub{\foreignlanguage{\tran@lang}{\MakeUppercase{\csname vedoucitext@\tran@lang\endcsname}}}
-   \fi
-\fi
-
-\Vutskf
-
-	\Vutsmall{\@City\ \@grade}
+    \@vedouci\hss
+}\par
 
 \end{hyphenrules}
 
@@ -1761,10 +1700,6 @@ a~som si plne vedom%
   \fi
 }%
 }%ifclassloaded
-
-
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Sazba stranky s citaci prikazem \makecitation                          %%
