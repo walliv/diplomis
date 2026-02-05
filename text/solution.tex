@@ -26,36 +26,167 @@ The PCI protocol did not keep pace with increasing demand of computer peripheral
 structures and needed to be changed. The PCI Express protocol significantly changed the strategy for
 both the communication topology and the physical properties of the interconnect. 
 
+\section{Communication model}
+
 The basic architecture is shown in Fig. XXX (host topology). Connections are implemented as
 point-to-point links between ports on different device types organized in a tree. The center of the
 topology is the \ac{RC}, which provides \emph{Root Ports}. Each device communicating over the
 infrastructure (such as today's GPU/FPGA accelerators) is called \emph{Function} and is the major
-source of traffic within the system\footnotemark. Each Function contains an \emph{Upstream port} for exchanging
-data. Since the number of Root Ports is limited by the processor's interconnect, fan-out is provided
-by \emph{PCIe Switches}, which supply multiple \emph{Downstream ports} and a single Upstream
-port. Each port supports full-duplex communication and introduces asynchronous clocking model.
-Using this model significantly improves the possible throughput of the interconnect where clock gets
-reconstructed from the patterns in the incoming data on the receiving port. Using Switches, the
-number of devices can be increased arbitrarily, making PCIe a switched network (W: cite PCIe spec).
-Although the PCIe specification introduces many advanced features, this thesis presents only the
-necessary ones for its purposes. 
+source of traffic within the system\footnotemark. Each Function contains an \emph{Upstream port} for
+exchanging data. Since the number of Root Ports is limited by the processor's interconnect, fan-out
+is provided by \emph{PCIe Switches}, which supply multiple \emph{Downstream ports} and a single
+Upstream port. Each port supports full-duplex communication and introduces asynchronous clocking
+model.  Using this model significantly improves the possible throughput of the interconnect where
+clock gets reconstructed from the patterns in the incoming data on the receiving port. Using
+Switches, the number of devices can be increased arbitrarily, making PCIe a switched network (W:
+cite PCIe spec). Although the PCIe specification introduces many advanced features, this thesis
+presents mostly the necessary ones for its purposes. 
 
 \footnotetext{
-    The PCIe specification (with concordance to the PCI) defines three System elements to identify
-    its devices, namely \emph{Bus}, \emph{Device} and \emph{Function}. Every point-to-point
-    connection in the topology makes a separate Bus. The Device identifier stays as a remnant of the PCI
-    standard and every Bus contains only one. Within each Device, one or multiple Functions can be
-    present. The Function is basically and adressable entity in the configuration space where
+    The PCIe specification (with concordance to the PCI) defines three \emph{System elements} to
+    identify its devices, namely \emph{Bus}, \emph{Device} and \emph{Function}. Every point-to-point
+    connection in the topology makes a separate Bus together with internal (virtual) buses of the
+    Switches and the Root Complex. The Device identifier stays as a remnant of the PCI standard and
+    every Bus within the PCIe topology contains only one. Within each Device, one or multiple Functions
+    can be present. The Function is basically and adressable entity in the configuration space where
     \emph{Endpoint} is the most important type of a Function. Using the term `device' in this thesis
-    will refer to a single-function device in the PCIe topology.
-  }
+    will refer to a general device in the PCIe topology that can contain one or multiple Functions
+    (or Endpoints).
+}
 
 % NOTE: Maybe mention BDF identifier if necessary
 
-\section{Communication model}
+Devices communicate using units called \acp{TLP}, forming a packetized transfer. Each \ac{TLP}
+contains a PCIe header used for identification followed by an optional payload. There are many
+\ac{TLP} types, but the ones mentioned in this work are \ac{MRd} and \ac{MWr}. Requests may require
+a response (called \emph{non-posted}, as with \acp{MRd}) in the form of \ac{Cpl} presenting a third
+\ac{TLP} type. Such requests are called \emph{non-posted} (like \acp{MRd}) while requests that do
+not require a response are called \emph{posted} (like \acp{MWr}). The device creating a request is
+called \emph{Requester}, while the device `completing' the request (sending a response or just
+accepting the payload) is called \emph{Completer}.
+
+The \ac{RC} is located on the CPU die and tightly integrated with the processing cores to provide
+fast access to the system's I/O devices. The \ac{RC} also provides the connection to host memory,
+which is the primary communication path used by DMA engines for \ac{H2D} and \ac{D2H} transfers.
+Multiple Root Ports or Downstream ports enable direct \ac{D2D} communication, as shown in Fig.\ XXX.
+
+% TODO: Figure with sketched DMA transport with Peer-to-peer transport
+% NOTE: Maybe include the layer model if we are going to talk about credits somewhere
 
 \section{Link configuration}
 
+The PCIe specification gets published in versions called \emph{generations}. With every new
+specification, the throughput of the bus gets doubled while keeping backward and forward
+compatibility between its standards (this is an important feature of PCIe). This is the reason, why
+the physical implementation of the protocol stack remains so complicated, especially on the physical
+layer. The physical connection between two ports consists of multiple differential pairs called
+\emph{lanes} that are bundled together into a \emph{link}. Each lane allows for full-duplex
+communication, where each direction is communicated using a separate differential pair. The link can
+either contain 1, 2, 4, 8 or 16 lanes.
+
+As for the physical attachment interface, this thesis works with two of them, namely \ac{CEM} and
+\emph{M.2}. The \ac{CEM} standard is the oldest one used for \emph{Add-in Cards} with GPU chips,
+FPGA accelerators or \acp{NIC}. It supports from 1 to 16 lanes with with wider link widths
+supporting lower ones and vice versa (these however with specially carved connectors that fit longer
+connector of the attached card). This form-factor allows for connection of the most power consuming
+peripherals where the connector can supply up to 75~W. The accelerators can require additional power
+by introducing external power supply attachements. The most common ATX connector adds another 75~W
+for its 6-pin configuration or 150~W for the 8-pin configuration (W: cite Intel's ATX standard).
+
+The second type of physical attachement, \emph{M.2}, is designed for ultra-light, power
+efficient platforms such as wireless modules or (as in the case of this thesis) \ac{NVMe} drives.
+This connector has a fixed set of 4 lanes and a variable module length ranging from 30~mm to 110~mm.
+These connectors present a detachable form factor for PCIe links but the standard allows for
+permanently attached devices to be connected as well. 
+
+% NOTE: maybe an overview table of available speeds of PCIe nowadays
+
+As it is obvious from the variety of link configurations in terms of speeds and the amount of lanes,
+the multitude of PCIe devices inside a compute node needs to agree on common parameters in order to
+facilitate data transfer. This process of negotiation is called \emph{link training} and it takes
+place after the network get powered up. The training is done on per-link-basis so there are multiple
+differently configured links in the system at a given point in time. This is presented on Fig. XXX
+where the M.2 SSD needs to communicate with the processor (where Root Ports can usually utilize up
+to 16 lanes) or with a \ac{NIC} which supports up to 16 lanes. Other than link's lane count and
+transfer rate, other configured parameters include lane polarity and lane reversal. Since the
+training and the negotiated link parameters are tha matter of the physical layer, the link
+properties remain transparent for the user.
+
+% TODO: Figure where different link widths are visiable
+
 \section{Device configuration}
 
+After the initial link training is done and every link is active, the host system does device
+discovery and configuration upon system boot in order to map the network. The process of discovery
+is called \emph{enumeration} and involves a CPU communicating through the Root Complex in order to find
+every connected device in the topology and assign its BDF identifier (this includes assigning
+numbers also to buses between ports that do not necessarily connect to an Endpoint, like two
+Switches or a Switch with the Root Complex). The search is done in a depth-first way where each
+device is registered if it responds with a valid \emph{Vendor ID} that is located within device's
+configuration registers. After assigning all BDFs in the topology, the configuration software
+further configures registers on the discovered devices. The configuration is done solely by the Root
+Complex in order to avoid the complexity of management when multiple devices (e.g. Endpoints) would
+try to configure each other. The initial assigning of configuration attributes is done using an
+IO-based transfer but further setting is done using \ac{MMIO}. 
+
+Each Endpoint contains configuration registers in a 64-byte \emph{PCI Configuration Header}, which
+holds the most important attributes controlling the Function's ability to initiate transactions over
+PCIe and to be addressable within a host system. Firstly, since devices cannot generate Requests on
+their own by default, the \emph{Bus Master} attribute enables this feature. Secondly, in order for
+adjacent devices to locate the current Function and to access its internal, user-defined
+registers/memory space, at least one of the \acp{BAR} must be initialized.  By using BARs, each
+Endpoint requests a memory space within a host system for MMIO access. This is needed to access the
+application logic from the outside since each Endpoint accepts only those transactions whose
+addresses are in the ranges specified by its BARs. Each Function can register up to six 32-bit BARs
+which provides memory segmentation needed by some host applications. When 64-bit addressing is
+requested, two consecutive BARs are used. Throughout this work, the observation has been made that
+most devices allocate one to two BARs and, when not exceeding 4 GiB of space, an operating system
+maps them to 32-bit address ranges even when 64-bit addressing has been requested. First of all,
+this addressing has to be enabled in the UEFI settings of the host system.
+
+Besides than the sheer capability for devices to be localizable in the system, other parameters are
+configured and need to be abided by by the user applications (e.g.\ the user-defined FPGA logic). A
+function defines its supported \ac{MPS} in the \emph{Device Capabilities register}. Seeing this
+value, the configuration software sets its preferred value in a field in the \emph{Device Control
+regiser}. The value of this field prohibits the Transmitter to dispatch TLP with greater payload
+than MPS specified and the Receiver to process them. The configuration allows furter adjustement
+using the \ac{MRRS} in the \emph{Device Control register} which prohibits the Transmitter to
+dispatch a Read Request greater than the specified size. Available values for these two parameters
+range from 128 to 4096~bytes (in powers of two steps). The configuration software balances these
+parameters based on latency/bandwidth requirements in the network. The configuration has to take
+account of the pairs of adjacent devices communicating with each other since receiving a TLP on a
+function's port whose size is larger than its set MPS results in the function rejecting this packet
+and reporting a fatal error\footnotemark. 
+
+\footnotetext{The PCIe standard does not define a segmentation of large TLPs.}
+
 \section{Peer-to-peer transfer}
+
+An important aspect of PCIe (with its predecessor as well) and the structure of its network allowed
+to introduce \ac{DMA} that allows to copy large amounts of data withouth the host CPU facilitating
+such copying. The usual approach it the exchange of data between PCIe devices and the host CPU
+through buffers in the host memory. However, the network infrastructure to address other devices in
+the topology as well. This type of \ac{D2D} transport is called \ac{P2P} or \emph{Host Bypassing}
+and makes a fundamental part of this thesis. There are several implications of running such
+transport in the host system. The specification makes the support for each Switch mandatory (for
+transport between its Downstream ports) but optional for the Root Complex (for transport between its
+Root Ports) (source to spec). The routing of TLP differes based on its type with \acp{MWr} and
+\acp{MRd} being routed by memory address while \acs{Cpl} being routed by Requester's BDF identifier.
+
+Today's host CPUs untilize \ac{IOMMU} to translate physical address to virtual ones in order to
+securely split I/O peripherals into groups. This unit is crucial in multi-tenant environments (like
+guests as virtual machines) where only devices in one group can perform P2P transfers between each
+other. Otherwise, where communication between two groups is required, the data need to be analyzed
+by the CPU. Without IOMMU a potentially malicious device can write and read from every region in the
+host system. The unit works hand in hand with the PCIe's \ac{ACS} which forces every traffic to pass
+through the \ac{RC} even if the devices are connected to the single Switch (depicted in Fig XXX).
+Otherwise, all devices under each Root Port are put to a common IOMMU group which does not play well
+with the need to decide isolation on per-device basis.
+
+Considering the test server used in this work, the support for P2P transferes has been discovered as
+well as the presence of multiple \acp{IOMMU} and enabled \ac{ACS} on the Root Ports. Since security
+is not a topic of this thesis nor are the system considerartions in the multi-tenant environments,
+both of these funcionalities have been disabled in server's UEFI. Therefore, the PCIe devices
+communicate using physical addresses.
+
+\chapter{Integrated core for PCIe on FPGAs}
