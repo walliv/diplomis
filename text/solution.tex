@@ -30,7 +30,7 @@ both the communication topology and the physical properties of the interconnect.
 
 The basic architecture is shown in Fig. XXX (host topology). Connections are implemented as
 point-to-point links between ports on different device types organized in a tree. The center of the
-topology is the \ac{RC}, which provides \emph{Root Ports}. Each device communicating over the
+topology is the \ac{rcpx}, which provides \emph{Root Ports}. Each device communicating over the
 infrastructure (such as today's GPU/FPGA accelerators) is called \emph{Function} and is the major
 source of traffic within the system\footnotemark. Each Function contains an \emph{Upstream port} for
 exchanging data. Since the number of Root Ports is limited by the processor's interconnect, fan-out
@@ -65,8 +65,8 @@ not require a response are called \emph{posted} (like \acp{MWr}). The device cre
 called \emph{Requester}, while the device `completing' the request (sending a response or just
 accepting the payload) is called \emph{Completer}.
 
-The \ac{RC} is located on the CPU die and tightly integrated with the processing cores to provide
-fast access to the system's I/O devices. The \ac{RC} also provides the connection to host memory,
+The \ac{rcpx} is located on the CPU die and tightly integrated with the processing cores to provide
+fast access to the system's I/O devices. The \ac{rcpx} also provides the connection to host memory,
 which is the primary communication path used by DMA engines for \ac{H2D} and \ac{D2H} transfers.
 Multiple Root Ports or Downstream ports enable direct \ac{D2D} communication, as shown in Fig.\ XXX.
 
@@ -92,6 +92,8 @@ connector of the attached card). This form-factor allows for connection of the m
 peripherals where the connector can supply up to 75~W. The accelerators can require additional power
 by introducing external power supply attachements. The most common ATX connector adds another 75~W
 for its 6-pin configuration or 150~W for the 8-pin configuration (W: cite Intel's ATX standard).
+
+% TODO: Image of different CEM connectors on the motherboard
 
 The second type of physical attachement, \emph{M.2}, is designed for ultra-light, power
 efficient platforms such as wireless modules or (as in the case of this thesis) \ac{NVMe} drives.
@@ -158,7 +160,8 @@ account of the pairs of adjacent devices communicating with each other since rec
 function's port whose size is larger than its set MPS results in the function rejecting this packet
 and reporting a fatal error\footnotemark. 
 
-\footnotetext{The PCIe standard does not define a segmentation of large TLPs.}
+\footnotetext{The PCIe standard does not require System Elements to perform segmentation of large
+    TLPs.} 
 
 \section{Peer-to-peer transfer}
 
@@ -179,7 +182,7 @@ guests as virtual machines) where only devices in one group can perform P2P tran
 other. Otherwise, where communication between two groups is required, the data need to be analyzed
 by the CPU. Without IOMMU a potentially malicious device can write and read from every region in the
 host system. The unit works hand in hand with the PCIe's \ac{ACS} which forces every traffic to pass
-through the \ac{RC} even if the devices are connected to the single Switch (depicted in Fig XXX).
+through the \ac{rcpx} even if the devices are connected to the single Switch (depicted in Fig XXX).
 Otherwise, all devices under each Root Port are put to a common IOMMU group which does not play well
 with the need to decide isolation on per-device basis.
 
@@ -190,3 +193,75 @@ both of these funcionalities have been disabled in server's UEFI. Therefore, the
 communicate using physical addresses.
 
 \chapter{Integrated core for PCIe on FPGAs}
+
+Modern FPGAs provide hardened IP core that implements the whole PCIe protocol stack (generally
+implementing a Port) that can be configured either as a Root Port (not as a \ac{rcpx} though) or an
+Upstream Port (mostly for Endpoint, sometimes for Switch on some devices). The IP utilizes
+high-speed serial transceivers located on the edge of the chip that connect directly to the
+CEM-compliant Edge connector on the PCB's side. This work utilizes the \emph{Alveo U55C} data-center
+acceleration card which is equipped with \verb+xcu55c-fsvh2892-2L-e+ chip (this corresponds to the
+serial chip \verb+vu57p+). The available integrated core called \emph{PCIE4C} allows to configure
+the interface to run on Gen3 transfer rat on 16 lanes (Gen3x16) or Gen4 transfer rate on 8
+lates (Gen4x8) providing the same throughput but reducing logic utilization. Since two of
+these cores are provided close to each other and a total of 16 lanes is provided, these cores can
+split the available lanes and the acceleration card can be configured to run in a \emph{PCIe
+bifurcation} mode. This mode utilizes a single PCIe link running two physically separated devices
+(each containing its own set of Functions). Therefore, the acceleration card can reach a cummulative
+data trasfer rate of PCIe Gen4x16.
+
+\section{Interfaces to user logic}
+
+Since the described core implement the whole PCIe protocol stack (meaning from Physical
+to Transaction layer), the user logic does not have to deal with task of the lower layers, such as
+transaction buffering, flow control credit management, data integrity check, lane deskew or clock
+recovery. In terms of the PCIe topology, this core implements an Upstream port (specifically as a
+PCIe Endpoint). The core provides four separate interfaces for the user logic where each follows the
+\emph{AXI4-Stream} specification. As mentioned before, each PCIe port allows for full-duplex
+communication, allowing each device to act both as a Requester and as a Completer at the same time.
+The core contains these separate interfaces exactly in concordance with this behavior which include:
+
+\begin{description}
+    \item[\ac{RQ}] allows user logic to send requests to other components in the PCIe
+    hierarchy.
+    \item[\ac{rcpl}] transfers completions for non-posted requests dispatched on the RQ
+    interfaces.
+    \item[\ac{CQ}] receives requests from other devices in the PCIe hierarchy and provides
+    them for the user logic.
+    \item[\ac{CC}] is used by the user logic to send responses for non-posted requests
+    received on the CQ interface.
+\end{description}
+
+Other than that, the core provides additional interfaces for transferring status information either
+from the link or from user logic, dispatching and receiving interrupts, sending messages, etc. The
+PCIe IP maintains its set of status registers as every other PCIe Endpoint that are accessible by
+an operating system. A separate interface for the Requester side can be used to manage flow control
+credits but this is not used in this work and the management is left on the PCIe IP.
+
+% TODO: Mention somewhere the addressing by DWords
+
+The width of the AXI4-Stream interfaces depends on the configured transfer rate of the IP. This work
+implements the DMA engine using 8-lane Gen4 PCIe endpoint which results in a 512-bit wide bus
+running on 250 MHz. All of the interfaces are running on thesame clock that is provided as the
+`user clock' output from the IP (cite PCIe IP spec). Data units communicated on these buses are
+adjusted \acp{TLP} where every is formed as a \emph{TLP header} followed by a payload of user data.
+The header uniquely identifies a payload within the PCIe topology with a physical address to the
+reserved space in the host memory or in another PCIe BAR. TLP header has a fixed size of 3~DW (12~B) for
+RC/CC interfaces and 4~DW (16~B) for RQ/CQ interfaces.
+
+Using wide buses carries a significant drawback when data do not fill whole bus words. For example,
+transferring 1~B of data using a 512b bus utilizes only about 1.5~\% of the bandwidth (1~B of payload
+plus a 16~B TLP header). To mitigate this inefficiency, the bus word is separated into two segments
+of equal size. Each segment can contain up to one TLP start and/or one TLP end. This doubles the
+throughput for packets that fit entirely within a single segment and generally improves throughput
+when a packet ends in the first segment (the second packet can then begin in the second segment).
+
+% TODO: Describe format of the TLP header
+
+\chapter{Non-volatile Memory Express}
+
+The \ac{NVMe} standard emerged in 2011 as a way of integration of non-volatile storage into the
+\ac{PCIe} domain. The standard emerged as a successor of \emph{SAS} and \emph{SATA} specifications
+in order to meet the requirements of consumer systems in terms of latency, throughput and
+scalability that fits with the flash-based storage. 
+
+% Multi-pathing in our case (N FPGAs to M NVMes)
