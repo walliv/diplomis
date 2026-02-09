@@ -114,7 +114,7 @@ transfer rate, other configured parameters include lane polarity and lane revers
 training and the negotiated link parameters are tha matter of the physical layer, the link
 properties remain transparent for the user.
 
-% TODO: Figure where different link widths are visiable
+% TODO: Figure of the hierarchy where different link widths are visiable
 
 \section{Device configuration}
 
@@ -260,8 +260,69 @@ when a packet ends in the first segment (the second packet can then begin in the
 \chapter{Non-volatile Memory Express}
 
 The \ac{NVMe} standard emerged in 2011 as a way of integration of non-volatile storage into the
-\ac{PCIe} domain. The standard emerged as a successor of \emph{SAS} and \emph{SATA} specifications
-in order to meet the requirements of consumer systems in terms of latency, throughput and
-scalability that fits with the flash-based storage. 
+\ac{PCIe} domain\footnotemark. The standard emerged as a successor of \emph{SAS} and \emph{SATA}
+specifications in order to meet the requirements of consumer systems in terms of latency, throughput
+and scalability that fits with the flash-based storage. All of these standards introduced a queue
+mechanism where commands (like write and read) are present and processed by the controller of the
+attached \ac{NVM}. Both, SATA and SAS support one command queue allowing up to 32 and 256 commands
+respectively. NVMe enhances this mechanism by allowing to instantiate up to $2^{16}$ queues where
+each can contain up to $2^{16}$ commands. Allowing to have many queues results in hardware-aided
+parallel access to the \ac{NVM} where, for example, each CPU core receives its own queue. The schema
+of the NVMe device is depicted in Fig. XXX. The \emph{NVMe controller} sits on top of a PCIe
+controller, managing the instantiation of queues and processing of commands. The non-volatile
+storage is presented as a \emph{Namespace} which is the basic referencable unit of storage in the
+NVMe standard\footnotemark. The controller is equipped with a DMA engine that performs a read and
+write of raw data between memory regions in the host system. This implies that the NVMe device
+behaves as a Bus Master and can therefore generate its own \acp{MWr} and \acp{MRd} which is suitable
+for the \ac{P2P} communication in the PCIe domain.
 
+\footnotetext{This thesis works with specification version 1.2b since it describes only its basic
+    concepts and not every currently working NVMe device supports the newest standard. The NVMe
+    specification is designed to be backward compatible though. Using older specifiactions may be
+    advised for boarding users to understand the basic concepts quickly.}
+
+\footnotetext{This is a simplified view in the referenced version of the NVMe specification. Later
+    versions define a more complex and fine-grained classification beyond namespaces. Moreover,
+    there can be many namespaces maintained by a single NVMe controller as well as one namespace shared
+    by many controllers.}
+
+The command mechanism provides two types of queues that always occur in pairs, the \emph{Submission
+queue} and the \emph{Completion queue}. A Submission queue contains commands that need to be
+processed by the NVMe controller which, after a command's execution, publishes a result of an
+operation  into a Completion queue. These queues are operated in the FIFO manner and are allocated
+as circular buffers in host-addressable memory. The most important pair is the \emph{Admin
+queue-pair} that is used for additional configuration. The controller appears in the PCIe system as
+a single Function and, initially, the kernel is able to only reach the standard registers in the
+PCIe Configuration Space and its \acp{BAR}. The NVMe driver allocates Admin queue-pair and publishes
+base addresses and sizes of the queues to controller registers located in BAR0.
+
+For data trasmission to/from the NVMe namespace, the configuration driver instantiates one or more
+\emph{I/O queue-pairs} which are used by the consumers/producers of data. Same as for the Admin
+queue-pair, these queues are allocated circular buffers in host-addressable memory. A fully
+initialized system with a 4-core processor and an NVMe device is shown in Fig. XXX. The controller
+can associate multiple I/O Submission queues with one I/O Completion queue in order to save
+resources (this is not possible for the Admin queue-pair though since only one can be instantiated). 
+
+% TODO: Figure with 4 IO queue-pairs, 1 Admin queue pair and
+
+% Ordering of commands
+% Arbitration between queues
+% Where are the queues stored
 % Multi-pathing in our case (N FPGAs to M NVMes)
+% Depict NVMe Read/Write in the timing diagram
+
+\section{Order of operations}
+
+A producer submits a command to a submission queue by using a template for \ac{SQE} described
+further. Upon storing such entry in the queue, the producer updates the \ac{SQTDBL} pointer in
+controller registers (in BAR0) in order to signalize the controller that new command has been
+submitted. This is followed by the controller fetching and executing the command followed by
+dispatching a completion into a completion queue that follows the \ac{CQE} template. If a command
+operates with additional data (like reading/writing data from/to the \ac{NVM} or fetching commands
+from a submission queue), the controller engages the DMA engine on the device.
+
+% Phase bit to recognize new CQEs
+
+The NVMe controller arbitrates between all of its queues in a Round-robin fashion\footnotemark.
+
+\footnotetext{Advanced devices can implement a Weighted Round-robin or vendor-specific mechanism.}
