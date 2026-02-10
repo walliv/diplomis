@@ -271,10 +271,11 @@ parallel access to the \ac{NVM} where, for example, each CPU core receives its o
 of the NVMe device is depicted in Fig. XXX. The \emph{NVMe controller} sits on top of a PCIe
 controller, managing the instantiation of queues and processing of commands. The non-volatile
 storage is presented as a \emph{Namespace} which is the basic referencable unit of storage in the
-NVMe standard\footnotemark. The controller is equipped with a DMA engine that performs a read and
-write of raw data between memory regions in the host system. This implies that the NVMe device
-behaves as a Bus Master and can therefore generate its own \acp{MWr} and \acp{MRd} which is suitable
-for the \ac{P2P} communication in the PCIe domain.
+NVMe standard\footnotemark. A namespace is split into multiple sectors marked by \acp{LBA} which are
+at least 512~B in size (which is mostly used one). The controller is equipped with a DMA engine that
+performs a read and write of raw data between memory regions in the host system.  This implies that
+the NVMe device behaves as a Bus Master and can therefore generate its own \acp{MWr} and \acp{MRd}
+which is suitable for the \ac{P2P} communication in the PCIe domain.
 
 \footnotetext{This thesis works with specification version 1.2b since it describes only its basic
     concepts and not every currently working NVMe device supports the newest standard. The NVMe
@@ -289,19 +290,21 @@ for the \ac{P2P} communication in the PCIe domain.
 The command mechanism provides two types of queues that always occur in pairs, the \emph{Submission
 queue} and the \emph{Completion queue}. A Submission queue contains commands that need to be
 processed by the NVMe controller which, after a command's execution, publishes a result of an
-operation  into a Completion queue. These queues are operated in the FIFO manner and are allocated
-as circular buffers in host-addressable memory. The most important pair is the \emph{Admin
-queue-pair} that is used for additional configuration. The controller appears in the PCIe system as
-a single Function and, initially, the kernel is able to only reach the standard registers in the
-PCIe Configuration Space and its \acp{BAR}. The NVMe driver allocates Admin queue-pair and publishes
-base addresses and sizes of the queues to controller registers located in BAR0.
+operation  into a Completion queue. These queues are allocated as circular buffers in a
+host-addressable memory. The most important pair is the \emph{Admin queue-pair} that is used for
+additional configuration. The controller appears in the PCIe system as a single Function and,
+initially, the kernel is able to only reach the standard registers in the PCIe Configuration Space
+and its \acp{BAR}. The NVMe driver allocates Admin queue-pair and publishes base addresses and sizes
+of the queues to controller registers located in BAR0.
 
 For data trasmission to/from the NVMe namespace, the configuration driver instantiates one or more
 \emph{I/O queue-pairs} which are used by the consumers/producers of data. Same as for the Admin
 queue-pair, these queues are allocated circular buffers in host-addressable memory. A fully
 initialized system with a 4-core processor and an NVMe device is shown in Fig. XXX. The controller
 can associate multiple I/O Submission queues with one I/O Completion queue in order to save
-resources (this is not possible for the Admin queue-pair though since only one can be instantiated). 
+resources (this is not possible for the Admin queue-pair though since only one can be instantiated).
+Each queue pair is identified by its ID where Admin queue-pair has a fixed ID of 0 and every other
+I/O queue pair reserves an ID of a higher index.
 
 % TODO: Figure with 4 IO queue-pairs, 1 Admin queue pair and
 
@@ -313,16 +316,76 @@ resources (this is not possible for the Admin queue-pair though since only one c
 
 \section{Order of operations}
 
-A producer submits a command to a submission queue by using a template for \ac{SQE} described
-further. Upon storing such entry in the queue, the producer updates the \ac{SQTDBL} pointer in
-controller registers (in BAR0) in order to signalize the controller that new command has been
-submitted. This is followed by the controller fetching and executing the command followed by
-dispatching a completion into a completion queue that follows the \ac{CQE} template. If a command
-operates with additional data (like reading/writing data from/to the \ac{NVM} or fetching commands
-from a submission queue), the controller engages the DMA engine on the device.
+One queue 2 pointers for its operation, a \emph{Head doorbell} and a \emph{Tail doorbell}. A
+consumer of entries from the queue operates a Head doorbell whereas every producer operates a Tail
+doorbell. This pair of pointers ensures that a producer does not overwrite unprocessed entries and
+that a consumer reads only valid ones. A queue is considered empty if values of these pointers are
+equal, and full if a value of the Tail doorbell is equal the value of the Head doorbell minus one
+modulo a size of the queue as is shown in Fig. XXX.
 
-% Phase bit to recognize new CQEs
+% TODO: Figure with shown empty queue and multiple full queue conditions.
 
-The NVMe controller arbitrates between all of its queues in a Round-robin fashion\footnotemark.
+A master submits a command to a submission queue by using a template for \ac{SQE} described further.
+Upon storing such entry in the queue, the master updates the \ac{SQTDBL} pointer in controller
+registers (in BAR0) in order to signalize the controller that new command has been submitted. This
+is followed by the controller fetching and executing the command followed by dispatching a
+completion into a completion queue that follows the \ac{CQE} template. If a command operates with
+additional data (like reading/writing data from/to the \ac{NVM} or fetching commands from a
+submission queue), the controller engages the DMA engine on the device. To detect a received
+completion of a command, the master does not have to read the \ac{CQTDBL} value (since this is not
+available and remains internal to the NVMe controller anyways). Rather, every \ac{CQE} contains a
+\emph{Phase tag (P)} that indicates that a position in the Completion queue contains a valid entry.
+The value that is considered valid is flipped upon every \ac{CQTDBL} rollover, starting as log.\ 1
+for the initial pass through queue (i.e.\ after queue initialization), then flipping to 0 when the
+pointer rolls back to 0 and so on.
 
-\footnotetext{Advanced devices can implement a Weighted Round-robin or vendor-specific mechanism.}
+\subsection{Command submission}
+
+The \ac{SQE} is created by a master by following a format in Fig. XXX (the grey marked fields are
+either unused or reserved) and it uniquely defines a command within a single NVMe controller. The
+entry has a length of 64~B (16~DW) with necessary information for a controller to process a command.
+There are two sets of commands defined by the NVMe specification, namely \emph{Admin Command Set}
+and \emph{NVM Command Set}\footnotemark. The mostly used used commands in this thesis on runtime are
+read and write from/to the \ac{NVM} that are described in the following paragraph.
+
+An \ac{SQE} begins with the \ac{OPC} field that distinguishes between different types of commands,
+the \emph{PSDT} field that specifies that \acp{PRP} are going to be used as copy buffers and the
+\ac{CID} field that presents a unique identifier when combined with the Submission Queue ID. This
+combination serves as a tag to match the dispatched command with a received completion. The first
+command DWord is followed by \ac{NSID} to index a specific namespace that is managed by the adjacent
+NVMe controller (the index is 1-based, meaning that the first namespace receives NSID 1).  The
+following \ac{DPTR} field serves as a pointer to the host-adressable memory either from which data
+need to be fetched (as for the write command) or to which the data are copied from the \ac{NVM} (as
+for the read command). The data pointer is split into two \ac{PRP} entries depending on how many
+memory pages contain the operated data in host memory, thus how big the transfer is going to be. If
+the transfer fits into one page, only \ac{PRP1} is used and it points to the start of the user data.
+In case a transfer, thus operated data, spans over 2 memory pages, the \ac{PRP2} is used as well to
+point to the second page. If a transfer spans more than 2 pages, the \ac{PRP2} changes its meaning
+to point to the \emph{PRP List} which contains pointers to every other page that contains to the
+user data. The following two Dwords (DW10 and DW11) contain the \ac{SLBA} field in the namespace the
+last usable field in DW12 contains the \ac{NLB} to copy. This size determines a size of a transfer
+for a currently processed command. The size of a transfer is limited by the NVMe controller and
+every master has to consult controller parameters in order to not submit larger transfers. When
+larger data  chunks are required than a transfer can process, multiple commands have to be
+submitted.
+
+% Ordering of completions
+
+After a command is processed the controller dispatches a \ac{CQE} to the Completion queue to notify
+the master about the status of a command. The template of every entry is shown in Fig. XXX.
+
+\footnotetext{In terms of more recent specification revisions, these sets use a \emph{memory-based}
+    transport which differs from \emph{message-based} transport. While the first type of transport is
+    typical for PCIe, newer specifications allow to attach NVM devices to other fabrics, like RDMA or
+    Ethernet, that use the second type of transport. These are part of the  \ac{NVMe-oF} standard
+    published separately.} 
+
+\subsection{Command completion}
+
+\section{Multi-pathing}
+
+% Multiple masters x multiple NVMe controllers
+
+% The NVMe controller arbitrates between all of its queues in a Round-robin fashion\footnotemark.
+% \footnotetext{Advanced devices can implement a Weighted Round-robin or vendor-specific mechanism.}
+
