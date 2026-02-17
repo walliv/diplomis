@@ -308,13 +308,11 @@ I/O queue pair reserves an ID of a higher index.
 
 % TODO: Figure with 4 IO queue-pairs, 1 Admin queue pair and
 
-% Ordering of commands
-% Arbitration between queues
 % Where are the queues stored
 % Multi-pathing in our case (N FPGAs to M NVMes)
 % Depict NVMe Read/Write in the timing diagram
 
-\section{Order of operations}
+\section{Principles of operation}
 
 One queue 2 pointers for its operation, a \emph{Head doorbell} and a \emph{Tail doorbell}. A
 consumer of entries from the queue operates a Head doorbell whereas every producer operates a Tail
@@ -324,6 +322,7 @@ equal, and full if a value of the Tail doorbell is equal the value of the Head d
 modulo a size of the queue as is shown in Fig. XXX.
 
 % TODO: Figure with shown empty queue and multiple full queue conditions.
+% Mention the effective size of a queue
 
 A master submits a command to a submission queue by using a template for \ac{SQE} described further.
 Upon storing such entry in the queue, the master updates the \ac{SQTDBL} pointer in controller
@@ -335,9 +334,6 @@ submission queue), the controller engages the DMA engine on the device. To detec
 completion of a command, the master does not have to read the \ac{CQTDBL} value (since this is not
 available and remains internal to the NVMe controller anyways). Rather, every \ac{CQE} contains a
 \emph{Phase tag (P)} that indicates that a position in the Completion queue contains a valid entry.
-The value that is considered valid is flipped upon every \ac{CQTDBL} rollover, starting as log.\ 1
-for the initial pass through queue (i.e.\ after queue initialization), then flipping to 0 when the
-pointer rolls back to 0 and so on.
 
 \subsection{Command submission}
 
@@ -371,9 +367,6 @@ submitted.
 
 % Ordering of completions
 
-After a command is processed the controller dispatches a \ac{CQE} to the Completion queue to notify
-the master about the status of a command. The template of every entry is shown in Fig. XXX.
-
 \footnotetext{In terms of more recent specification revisions, these sets use a \emph{memory-based}
     transport which differs from \emph{message-based} transport. While the first type of transport is
     typical for PCIe, newer specifications allow to attach NVM devices to other fabrics, like RDMA or
@@ -382,10 +375,73 @@ the master about the status of a command. The template of every entry is shown i
 
 \subsection{Command completion}
 
+After a command is processed the controller dispatches a \ac{CQE} to the Completion queue to notify
+the master about the status of a command. The template of every entry is shown in Fig. XXX. A
+\ac{CQE} is at least 16 bytes in size. The first DWord is used by some commands to publish
+command-specific information (the Read and Write commands do not use them though) while the second
+DWord is reserved. An NVMe controller indicates the internal value of \ac{SQHDBL} through every
+completion entry which notifies the transmitter of commands about how many commands have been read
+by the controller (thus providing a backpressure). The \ac{SQID} and \ac{CID} fields serve a unique
+identifier of a command in the communication chain. The \ac{SQID} is present because the NVMe
+specification allows to associate multiple Submission queue with one Completion queue (this applies
+for one NVMe controller though since every controller maintains its own set of queues). A
+\emph{Phase Tag (P)} field follows and its value indicates that the current position in the
+Completion queue is valid (meaning the position to which \ac{CQHDBL} points to). The value that is
+considered valid is flipped upon every \ac{CQTDBL} rollover, starting as logical 1 for the initial
+pass through queue (i.e.\ after queue initialization), then flipping to 0 when the pointer rolls
+back to 0, then to 1 again and so on.
+
+The last bits of a CQE are occupied by status information about the successful/unsuccessful
+execution of a command. The \ac{DNR} bit indicates that if the same command is going to be
+resubmitted, it is expected to fail. The submitter has to wait till this bit clears to 0 in order to
+receive valid data. The \emph{More (M)} bit indicates that a completion for a command is going to be
+composed out of multiple \acp{CQE}. A more specific information about a command's status can be
+found in the \ac{SCT} and \ac{SC} fields. A NVMe controller provides coarse-grained category of
+status within the first field whereas a more fine-grained in the second one. Here are some examples
+of possible status codes received:
+
+\begin{itemize}
+    \item A successfull completion is indicated by the SCT field set to 0h (i.e.\ \emph{Generic
+        Command Status}) and the SC field set to 00h (i.e.\ \emph{Successful Completion}).
+    \item When a submitter dispatches an NVMe command with a specified LBA range that exceeds the
+        capacity of the Namespace, the SCT field is set to 00h and the SC field to 80h (i.e.\
+        \emph{LBA Out of Range}).
+    \item Submitting two NVMe Write/Read commands with the same \ac{CID} results in a completion
+        status where SCT is set to 1h (i.e.\ \emph{Command Specific Status}) and SC set to 80h
+        (i.e.\ \emph{Conflicting Attibutes}).
+\end{itemize}
+
+\subsection{Ordering}
+
+An important note has to be made with regards to ordering of submitted commands. An NVMe controller
+arbitrates between its own set of submission queues in a round-robin fashion and can fetch multiple
+commands out of every queue\footnotemark. The order of execution where many commands are fetched is not defined
+by the NVMe specification and can be arbitrary. This is the reason why a tagging of commands using
+the \ac{CID} field is important so the submittier can bound a completion to a dispatched command.
+The order of execution can therefore be derived from the order in which the completions for mutliple
+commands have been received. If a strict ordering of commands is required, a submitter needs to
+implement its own for that. However, by the means of the NVMe specification, there are two ways of
+how to ensure ordering. The standard allows to use \emph{Fused operations} in order to force
+ordering of two subsequent commands. Such two commands can be executed atomically, resulting in the
+success only if both of the commands succeed. However, this feature is optional and, therefore,
+implementation specific. The second way that is always available, is to submit only one command to
+the submission queue and wait for its completion before submitting another commands. This can be
+guarded by the submitter itself or by initializing the submission queue with the size of 2 (since
+this can contain at most 1 valid SQE) and using the blocking by the doorbell pointers. The second
+way is used in the implementation proposed by this thesis. 
+
+\footnotetext{Advanced devices can implement a Weighted Round-robin or some vendor-specific mechanism.}
+
 \section{Multi-pathing}
 
-% Multiple masters x multiple NVMe controllers
+Since multiple queues can be initialized for a single NVMe controller, multiple submitters can
+execute commands on the controller. Since the proposed implementation in this thesis introduces a
+direct NVMe device access from an FPGA acceleration card using the PCIe \ac{P2P} transfer, it contains
+a potential to access multiple NVMe devices (the 1-to-M topology) as well as to access multiple NVMe
+devices from multiple acceleration cards, thus implementing an N-to-M topology\footnotemark. These
+can be seen in Figure XXX and XXX. This feature that allows to access one NVMe device from multipler
+masters is sometimes called \emph{multi-pathing}.
 
-% The NVMe controller arbitrates between all of its queues in a Round-robin fashion\footnotemark.
-% \footnotetext{Advanced devices can implement a Weighted Round-robin or vendor-specific mechanism.}
-
+\footnotetext{This topoolgy, however, is only virtual since it is made only by addressing and not by
+  physical connections. When performance (like throughput) is critical, it should be adapted on the
+  underlying PCIe topology which is organized as a tree by design.}
