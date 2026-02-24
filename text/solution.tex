@@ -237,8 +237,6 @@ PCIe IP maintains its set of status registers as every other PCIe Endpoint that 
 an operating system. A separate interface for the Requester side can be used to manage flow control
 credits but this is not used in this work and the management is left on the PCIe IP.
 
-% TODO: Mention somewhere the addressing by DWords
-
 The width of the AXI4-Stream interfaces depends on the configured transfer rate of the IP. This work
 implements the DMA engine using 8-lane Gen4 PCIe endpoint which results in a 512-bit wide bus
 running on 250 MHz. All of the interfaces are running on thesame clock that is provided as the
@@ -254,8 +252,6 @@ plus a 16~B TLP header). To mitigate this inefficiency, the bus word is separate
 of equal size. Each segment can contain up to one TLP start and/or one TLP end. This doubles the
 throughput for packets that fit entirely within a single segment and generally improves throughput
 when a packet ends in the first segment (the second packet can then begin in the second segment).
-
-% TODO: Describe format of the TLP header
 
 \chapter{Non-volatile Memory Express}
 
