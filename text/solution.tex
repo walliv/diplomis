@@ -28,7 +28,7 @@ both the communication topology and the physical properties of the interconnect.
 
 \section{Communication model}
 
-The basic architecture is shown in Fig. XXX (host topology). Connections are implemented as
+The basic architecture is shown in~\cref{fig:pcie_basic}. Connections are implemented as
 point-to-point links between ports on different device types organized in a tree. The center of the
 topology is the \ac{rcpx}, which provides \emph{Root Ports}. Each device communicating over the
 infrastructure (such as today's GPU/FPGA accelerators) is called \emph{Function} and is the major
@@ -41,6 +41,13 @@ clock gets reconstructed from the patterns in the incoming data on the receiving
 Switches, the number of devices can be increased arbitrarily, making PCIe a switched network (W:
 cite PCIe spec). Although the PCIe specification introduces many advanced features, this thesis
 presents mostly the necessary ones for its purposes. 
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.2]{pict/host_topology-raw_topology}
+    \caption{Basic scheme of the PCIe system topology with its designated elements}
+    \label{fig:pcie_basic}
+\end{figure}
 
 \footnotetext{
     The PCIe specification (with concordance to the PCI) defines three \emph{System elements} to
@@ -68,7 +75,17 @@ accepting the payload) is called \emph{Completer}.
 The \ac{rcpx} is located on the CPU die and tightly integrated with the processing cores to provide
 fast access to the system's I/O devices. The \ac{rcpx} also provides the connection to host memory,
 which is the primary communication path used by DMA engines for \ac{H2D} and \ac{D2H} transfers.
-Multiple Root Ports or Downstream ports enable direct \ac{D2D} communication, as shown in Fig.\ XXX.
+Multiple Root Ports or Downstream ports enable direct \ac{D2D} communication, as shown
+in~\cref{fig:pcie_transfers}.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.2]{pict/host_topology-d2d_write}
+    \caption{Examples of the transports occuring in the PCIe domain. Each device can be both
+      Requester (i.e.\ dispatching a request) and a Completer (i.e.\ receiving a request) at the
+      same time.} 
+    \label{fig:pcie_transfers}
+\end{figure}
 
 % TODO: Figure with sketched DMA transport with Peer-to-peer transport
 % NOTE: Maybe include the layer model if we are going to talk about credits somewhere
@@ -107,14 +124,20 @@ As it is obvious from the variety of link configurations in terms of speeds and 
 the multitude of PCIe devices inside a compute node needs to agree on common parameters in order to
 facilitate data transfer. This process of negotiation is called \emph{link training} and it takes
 place after the network get powered up. The training is done on per-link-basis so there are multiple
-differently configured links in the system at a given point in time. This is presented on Fig. XXX
-where the M.2 SSD needs to communicate with the processor (where Root Ports can usually utilize up
-to 16 lanes) or with a \ac{NIC} which supports up to 16 lanes. Other than link's lane count and
-transfer rate, other configured parameters include lane polarity and lane reversal. Since the
-training and the negotiated link parameters are tha matter of the physical layer, the link
-properties remain transparent for the user.
+differently configured links in the system at a given point in time. This is presented
+on~\cref{fig:pcie_diff_link_widths} where the M.2 SSD needs to communicate with the processor
+(where Root Ports can usually utilize up to 16 lanes) or with a \ac{NIC} which supports up to 16
+lanes. Other than link's lane count and transfer rate, other configured parameters include lane
+polarity and lane reversal. Since the training and the negotiated link parameters are tha matter of
+the physical layer, the link properties remain transparent for the user.
 
-% TODO: Figure of the hierarchy where different link widths are visiable
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.4]{pict/host_topology-diff_link_widths}
+    \caption{Topology with multiple interconnected devices where each supports different link
+      width.}  
+    \label{fig:pcie_diff_link_widths}
+\end{figure}
 
 \section{Device configuration}
 
@@ -182,9 +205,16 @@ guests as virtual machines) where only devices in one group can perform P2P tran
 other. Otherwise, where communication between two groups is required, the data need to be analyzed
 by the CPU. Without IOMMU a potentially malicious device can write and read from every region in the
 host system. The unit works hand in hand with the PCIe's \ac{ACS} which forces every traffic to pass
-through the \ac{rcpx} even if the devices are connected to the single Switch (depicted in Fig XXX).
-Otherwise, all devices under each Root Port are put to a common IOMMU group which does not play well
-with the need to decide isolation on per-device basis.
+through the \ac{rcpx} even if the devices are connected to the single Switch (this is shown
+in~\cref{fig:pcie_acr}).  Otherwise, all devices under each Root Port are put to a common IOMMU
+group which does not play well with the need to decide isolation on per-device basis.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/host_topology-acr_influence}
+    \caption{Influence of the ACS mechanism being enabled or disabled}  
+    \label{fig:pcie_acr}
+\end{figure}
 
 Considering the test server used in this work, the support for P2P transferes has been discovered as
 well as the presence of multiple \acp{IOMMU} and enabled \ac{ACS} on the Root Ports. Since security
@@ -264,7 +294,7 @@ attached \ac{NVM}. Both, SATA and SAS support one command queue allowing up to 3
 respectively. NVMe enhances this mechanism by allowing to instantiate up to $2^{16}$ queues where
 each can contain up to $2^{16}$ commands. Allowing to have many queues results in hardware-aided
 parallel access to the \ac{NVM} where, for example, each CPU core receives its own queue. The schema
-of the NVMe device is depicted in Fig. XXX. The \emph{NVMe controller} sits on top of a PCIe
+of the NVMe device is depicted in~\cref{fig:nvme_dev}. The \emph{NVMe controller} sits on top of a PCIe
 controller, managing the instantiation of queues and processing of commands. The non-volatile
 storage is presented as a \emph{Namespace} which is the basic referencable unit of storage in the
 NVMe standard\footnotemark. A namespace is split into multiple sectors marked by \acp{LBA} which are
@@ -272,6 +302,13 @@ at least 512~B in size (which is mostly used one). The controller is equipped wi
 performs a read and write of raw data between memory regions in the host system.  This implies that
 the NVMe device behaves as a Bus Master and can therefore generate its own \acp{MWr} and \acp{MRd}
 which is suitable for the \ac{P2P} communication in the PCIe domain.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-nvme_design}
+    \caption{Elementary block scheme of the NVMe device}  
+    \label{fig:nvme_dev}
+\end{figure}
 
 \footnotetext{This thesis works with specification version 1.2b since it describes only its basic
     concepts and not every currently working NVMe device supports the newest standard. The NVMe
@@ -296,16 +333,21 @@ of the queues to controller registers located in BAR0.
 For data trasmission to/from the NVMe namespace, the configuration driver instantiates one or more
 \emph{I/O queue-pairs} which are used by the consumers/producers of data. Same as for the Admin
 queue-pair, these queues are allocated circular buffers in host-addressable memory. A fully
-initialized system with a 4-core processor and an NVMe device is shown in Fig. XXX. The controller
-can associate multiple I/O Submission queues with one I/O Completion queue in order to save
-resources (this is not possible for the Admin queue-pair though since only one can be instantiated).
-Each queue pair is identified by its ID where Admin queue-pair has a fixed ID of 0 and every other
-I/O queue pair reserves an ID of a higher index.
+initialized system with a 4-core processor and an NVMe device is shown
+in~\cref{fig:nvme_init_system}. The controller can associate multiple I/O Submission queues with one
+I/O Completion queue in order to save resources (this is not possible for the Admin queue-pair
+though since only one can be instantiated).  Each queue pair is identified by its ID where Admin
+queue-pair has a fixed ID of 0 and every other I/O queue pair reserves an ID of a higher index.
 
-% TODO: Figure with 4 IO queue-pairs, 1 Admin queue pair and
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-nvme_initialized_system}
+    \caption{Initialized system with an NVMe device communicating with the host CPU. The indexing of
+      the IO adheres to the standard since the index 0 is reserved for the Admin queue-pair.}  
+    \label{fig:nvme_init_system}
+\end{figure}
 
 % Where are the queues stored
-% Multi-pathing in our case (N FPGAs to M NVMes)
 % Depict NVMe Read/Write in the timing diagram
 
 \section{Principles of operation}
@@ -315,9 +357,22 @@ consumer of entries from the queue operates a Head doorbell whereas every produc
 doorbell. This pair of pointers ensures that a producer does not overwrite unprocessed entries and
 that a consumer reads only valid ones. A queue is considered empty if values of these pointers are
 equal, and full if a value of the Tail doorbell is equal the value of the Head doorbell minus one
-modulo a size of the queue as is shown in Fig. XXX.
+modulo a size of the queue as is shown in~\cref{fig:nvme_empty_queue, fig:nvme_full_queue}.
 
-% TODO: Figure with shown empty queue and multiple full queue conditions.
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-empty_queue}
+    \caption{Two examples of an empty queue}  
+    \label{fig:nvme_empty_queue}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-full_queue}
+    \caption{Two examples of a full queue}  
+    \label{fig:nvme_full_queue}
+\end{figure}
+
 % Mention the effective size of a queue
 
 A master submits a command to a submission queue by using a template for \ac{SQE} described further.
@@ -330,6 +385,7 @@ submission queue), the controller engages the DMA engine on the device. To detec
 completion of a command, the master does not have to read the \ac{CQTDBL} value (since this is not
 available and remains internal to the NVMe controller anyways). Rather, every \ac{CQE} contains a
 \emph{Phase tag (P)} that indicates that a position in the Completion queue contains a valid entry.
+
 
 \subsection{Command submission}
 
@@ -432,11 +488,18 @@ way is used in the implementation proposed by this thesis.
 
 Since multiple queues can be initialized for a single NVMe controller, multiple submitters can
 execute commands on the controller. Since the proposed implementation in this thesis introduces a
-direct NVMe device access from an FPGA acceleration card using the PCIe \ac{P2P} transfer, it contains
-a potential to access multiple NVMe devices (the 1-to-M topology) as well as to access multiple NVMe
-devices from multiple acceleration cards, thus implementing an N-to-M topology\footnotemark. These
-can be seen in Figure XXX and XXX. This feature that allows to access one NVMe device from multipler
-masters is sometimes called \emph{multi-pathing}.
+direct NVMe device access from an FPGA acceleration card using the PCIe \ac{P2P} transfer, it
+contains a potential to access multiple NVMe devices (the 1-to-M topology) as well as to access
+multiple NVMe devices from multiple acceleration cards, thus implementing an N-to-M
+topology\footnotemark\@ as seen in~\cref{fig:nvme_multipath}. This feature that allows to access one NVMe device from
+multiple masters is sometimes called \emph{multi-pathing}.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-multi_pathing}
+    \caption{Example topology with N:M mesh network}  
+    \label{fig:nvme_multipath}
+\end{figure}
 
 \footnotetext{This topoolgy, however, is only virtual since it is made only by addressing and not by
   physical connections. When performance (like throughput) is critical, it should be adapted on the
