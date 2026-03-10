@@ -5,9 +5,9 @@ The \ac{PCIe} is the interconnect standard that emerged in 2003 from the \ac{PCI
 devices and more throughput were required. These include:
 
 \begin{itemize}
-        \item Shared-bus topology that, in spite of its simplicity, was rendered unscalable since with
-        increasing amount of devices, the bus gets longer which weakens the signal for the farthest
-        device.
+        \item Shared-bus topology that, in spite of its simplicity, was rendered unscalable since
+        with increasing amount of devices, the bus gets longer which weakens the signal for the
+        farthest device.
         \item Common clock which does not fit well with parallel data transmission model especially
         when lane skew takes place, meaning the bits of data travel unevenly fast over the wires.
         \item Half-duplex communication allows only one device to communicate at one point at a
@@ -16,7 +16,8 @@ devices and more throughput were required. These include:
         This uses an interference of the sent wave from the master (which had driven the signal to
         the lower voltage than needed for the digital circuits on the bus) and its reflection that
         originated on the end of a bus (there is no termination on the bus' end). By the addition of
-        these two waves, the signal reaches the required voltage level for the digital circuits\cite{pcie_book}.
+        these two waves, the signal reaches the required voltage level for the digital
+        circuits\cite{pcie_book}.
 \end{itemize}
 
 % TODO: Add picture of PCI topology with some functions and one PCI-to-PCI bridge.
@@ -37,14 +38,15 @@ is provided by \emph{PCIe Switches}, which supply multiple \emph{Downstream port
 Upstream port. Each port supports full-duplex communication and introduces asynchronous clocking
 model.  Using this model significantly improves the possible throughput of the interconnect where
 clock gets reconstructed from the patterns in the incoming data on the receiving port. Using
-Switches, the number of devices can be increased arbitrarily, making PCIe a switched network\cite{pcie_spec}.
-Although the PCIe specification introduces many advanced features, this thesis
-presents mostly the necessary ones for its purposes.
+Switches, the number of devices can be increased arbitrarily, making PCIe a switched
+network\cite{pcie_spec}. Although the PCIe specification introduces many advanced features, this
+thesis presents mostly the necessary ones for its purposes.
 
 \begin{figure}[!h]
     \centering
     \includegraphics[scale=1.2]{pict/host_topology-raw_topology}
-    \caption[Example of PCIe topology]{Example of a topology using PCIe interconnect with its designated elements}
+    \caption[Example of PCIe topology]{Example of a topology using PCIe interconnect with its
+    designated elements}
     \label{fig:pcie_basic}
 \end{figure}
 
@@ -80,9 +82,9 @@ in~\cref{fig:pcie_transfers}.
 \begin{figure}[!h]
     \centering
     \includegraphics[scale=1.2]{pict/host_topology-d2d_write}
-    \caption[Examples of PCIe transports]{Examples of the transports occurring in the PCIe domain. Each device can be both
-      Requester (i.e.\ dispatching a request) and a Completer (i.e.\ receiving a request) at the
-      same time.}
+    \caption[Examples of PCIe transports]{Examples of the transports occurring in the PCIe domain.
+      Each device can be both Requester (i.e.\ dispatching a request) and a Completer (i.e.\
+      receiving a request) at the same time.}
     \label{fig:pcie_transfers}
 \end{figure}
 
@@ -97,12 +99,13 @@ the physical implementation of the protocol stack remains so complicated, especi
 layer. The physical connection between two ports consists of multiple differential pairs called
 \emph{lanes} that are bundled together into a \emph{link}. Each lane allows for full-duplex
 communication, where each direction is communicated using a separate differential pair. The link can
-either contain 1, 2, 4, 8 or 16 lanes. The communication speeds are shown in~\cref{tab:res_consumption}.
+either contain 1, 2, 4, 8 or 16 lanes. The communication speeds are shown
+in~\cref{tab:res_consumption}.
 
 \begin{table}[t]
     \centering
-    \caption[PCIe throughput based on its versions]{PCIe throughput based on its versions. The throughput
-    is calculated without the overhead of the Physical layer}
+    \caption[PCIe throughput based on its versions]{PCIe throughput based on its versions. The
+    throughput is calculated without the overhead of the Physical layer}
     \label{tab:res_consumption}
     \begin{tabular}{cccccccc}
     \toprule
@@ -131,8 +134,8 @@ for its 6-pin configuration or 150~W for the 8-pin configuration\cite{atx_spec}.
 \begin{figure}[!h]
     \centering
     \includegraphics[scale=0.4]{pict/cem_conns}
-    \caption[Various types of PCIe CEM connectors]{Different types of CEM PCIe connectors supporting 4,
-    16, 1 or 16 lanes (looking from the top). The bottom connector belongs to the old PCI
+    \caption[Various types of PCIe CEM connectors]{Different types of CEM PCIe connectors supporting
+    4, 16, 1 or 16 lanes (looking from the top). The bottom connector belongs to the old PCI
     bus\cite{pcie_cem_conns}}
     \label{fig:pcie_cem_conns}
 \end{figure}
@@ -157,8 +160,8 @@ the physical layer, the link properties remain transparent for the user.
 \begin{figure}[!h]
     \centering
     \includegraphics[scale=1.4]{pict/host_topology-diff_link_widths}
-    \caption[PCIe topology with different link widths]{Topology with multiple interconnected devices where each supports different link
-      width.}
+    \caption[PCIe topology with different link widths]{Topology with multiple interconnected devices
+      where each supports different link width.}
     \label{fig:pcie_diff_link_widths}
 \end{figure}
 
@@ -253,9 +256,9 @@ Upstream Port (mostly for Endpoint, sometimes for Switch on some devices). The I
 high-speed serial transceivers located on the edge of the chip that connect directly to the
 CEM-compliant Edge connector on the PCB's side. This work utilizes the \emph{Alveo U55C} data-center
 acceleration card which is equipped with \verb+xcu55c-fsvh2892-2L-e+ chip (this corresponds to the
-serial chip \verb+vu57p+)\cite{alveo_u55c}. The available integrated core called \emph{PCIE4C} allows to configure
-the interface to run on Gen3 transfer rat on 16 lanes (Gen3x16) or Gen4 transfer rate on 8
-lanes (Gen4x8) providing the same throughput but reducing logic utilization. Since two of
+serial chip \verb+vu57p+)\cite{alveo_u55c}. The available integrated core called \emph{PCIE4C}
+allows to configure the interface to run on Gen3 transfer rat on 16 lanes (Gen3x16) or Gen4 transfer
+rate on 8 lanes (Gen4x8) providing the same throughput but reducing logic utilization. Since two of
 these cores are provided close to each other and a total of 16 lanes is provided, these cores can
 split the available lanes and the acceleration card can be configured to run in a \emph{PCIe
 bifurcation} mode. This mode utilizes a single PCIe link running two physically separated devices
@@ -340,8 +343,8 @@ which is suitable for the \ac{P2P} communication in the PCIe domain.
 
 \footnotetext{This is a simplified view in the referenced version of the NVMe specification. Later
     versions define a more complex and fine-grained classification beyond namespaces. Moreover,
-    there can be many namespaces maintained by a single NVMe controller as well as one namespace shared
-    by many controllers.}
+    there can be many namespaces maintained by a single NVMe controller as well as one namespace
+    shared by many controllers.}
 
 The command mechanism provides two types of queues that always occur in pairs, the \emph{Submission
 queue} and the \emph{Completion queue}. A Submission queue contains commands that need to be
@@ -356,7 +359,7 @@ of the queues to controller registers located in BAR0.
 For data transmission to/from the NVMe namespace, the configuration driver instantiates one or more
 \emph{I/O queue-pairs} which are used by the consumers/producers of data. Same as for the Admin
 queue-pair, these queues are allocated circular buffers in host-addressable memory. A fully
-initialized system with a 4-core processor and an NVMe device is shown
+initialized system with an 8-core processor and an NVMe device is shown
 in~\cref{fig:nvme_init_system}. The controller can associate multiple I/O Submission queues with one
 I/O Completion queue in order to save resources (this is not possible for the Admin queue-pair
 though since only one can be instantiated).  Each queue pair is identified by its ID where Admin
@@ -365,9 +368,9 @@ queue-pair has a fixed ID of 0 and every other I/O queue pair reserves an ID of 
 \begin{figure}[!h]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-nvme_initialized_system}
-    \caption[Initialized system with one NVMe device and a CPU]{Initialized system with an NVMe device
-        communicating with the host CPU. The indexing of the IO adheres to the standard since the
-        index 0 is reserved for the Admin queue-pair.}
+    \caption[Initialized system with one NVMe device and a CPU]{Initialized system with an NVMe
+        device communicating with the host CPU. The indexing of the IO adheres to the standard since
+        the index 0 is reserved for the Admin queue-pair.}
     \label{fig:nvme_init_system}
 \end{figure}
 
@@ -422,8 +425,8 @@ are described in the following paragraph.
 \begin{figure}[!h]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-sqe_template}
-    \caption[Format of Submission Queue Entry]{Format of Submission Queue Entry. The greyed-out fields are either reserved or
-      unused within this thesis.}
+    \caption[Format of Submission Queue Entry]{Format of Submission Queue Entry. The greyed-out
+      fields are either reserved or unused within this thesis.}
     \label{fig:nvme_sqe}
 \end{figure}
 
@@ -475,8 +478,8 @@ pointer rolls back to 0, then to 1 again and so on.
 \begin{figure}[!h]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-cqe_template}
-    \caption[Format of Completion Queue Entry]{Format of Completion Queue Entry. The greyed-out fields are either reserved or
-      unused within this thesis.}
+    \caption[Format of Completion Queue Entry]{Format of Completion Queue Entry. The greyed-out
+      fields are either reserved or unused within this thesis.}
     \label{fig:nvme_cqe}
 \end{figure}
 
@@ -504,20 +507,20 @@ of possible status codes received:
 
 An important note has to be made with regards to ordering of submitted commands. An NVMe controller
 arbitrates between its own set of submission queues in a round-robin fashion and can fetch multiple
-commands out of every queue\footnotemark. The order of execution where many commands are fetched is not defined
-by the NVMe specification and can be arbitrary. This is the reason why a tagging of commands using
-the \ac{CID} field is important so the submitter can bound a completion to a dispatched command.
-The order of execution can therefore be derived from the order in which the completions for multiple
-commands have been received. If a strict ordering of commands is required, a submitter needs to
-implement its own for that. However, by the means of the NVMe specification, there are two ways of
-how to ensure ordering. The standard allows to use \emph{Fused operations} in order to force
-ordering of two subsequent commands. Such two commands can be executed atomically, resulting in the
-success only if both of the commands succeed. However, this feature is optional and, therefore,
-implementation specific. The second way that is always available, is to submit only one command to
-the submission queue and wait for its completion before submitting another commands. This can be
-guarded by the submitter itself or by initializing the submission queue with the size of 2 (since
-this can contain at most 1 valid SQE) and using the blocking by the doorbell pointers. The second
-way is used in the implementation proposed by this thesis.
+commands out of every queue\footnotemark. The order of execution where many commands are fetched is
+not defined by the NVMe specification and can be arbitrary. This is the reason why a tagging of
+commands using the \ac{CID} field is important so the submitter can bound a completion to a
+dispatched command. The order of execution can therefore be derived from the order in which the
+completions for multiple commands have been received. If a strict ordering of commands is required,
+a submitter needs to implement its own for that. However, by the means of the NVMe specification,
+there are two ways of how to ensure ordering. The standard allows to use \emph{Fused operations} in
+order to force ordering of two subsequent commands. Such two commands can be executed atomically,
+resulting in the success only if both of the commands succeed. However, this feature is optional
+and, therefore, implementation specific. The second way that is always available, is to submit only
+one command to the submission queue and wait for its completion before submitting another commands.
+This can be guarded by the submitter itself or by initializing the submission queue with the size of
+2 (since this can contain at most 1 valid SQE) and using the blocking by the doorbell pointers. The
+second way is used in the implementation proposed by this thesis.
 
 \footnotetext{Advanced devices can implement a Weighted Round-robin or some vendor-specific mechanism.}
 
@@ -528,16 +531,16 @@ execute commands on the controller. Since the proposed implementation in this th
 direct NVMe device access from an FPGA acceleration card using the PCIe \ac{P2P} transfer, it
 contains a potential to access multiple NVMe devices (the 1-to-M topology) as well as to access
 multiple NVMe devices from multiple acceleration cards, thus implementing an N-to-M
-topology\footnotemark\@ as seen in~\cref{fig:nvme_multipath}. This feature that allows to access one NVMe device from
-multiple masters is sometimes called \emph{multi-pathing}.
+topology\footnotemark\@ as seen in~\cref{fig:nvme_multipath}. This feature that allows to access one
+NVMe device from multiple masters is sometimes called \emph{multi-pathing}.
 
 \begin{figure}[!h]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-multi_pathing}
-    \caption{Example topology with N:M mesh network}
+    \caption{Example topology with M:N mesh network}
     \label{fig:nvme_multipath}
 \end{figure}
 
 \footnotetext{This topology, however, is only virtual since it is made only by addressing and not by
-  physical connections. When performance (like throughput) is critical, it should be adapted on the
-  underlying PCIe topology which is organized as a tree by design.}
+  physical connections. When performance (like throughput or latency) is critical, it should be
+  adapted on the underlying PCIe topology which is organized as a tree by design.}
