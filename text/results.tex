@@ -8,7 +8,7 @@ Iuventus} IP core has been developed to process requests between an accelerator 
 The \ac{DMA} description has been retained to highlight the mechanism of the direct copying of data
 to the adjacent storage without a host CPU facilitating such transfers (this is sometimes called
 \emph{Host bypassing}). This IP sits on the integrated block for PCIe of the FPGA to accept
-NVMe-specific traffic alongside with a logic that processes transactions to \ac{C/S} registers. 
+NVMe-specific traffic alongside with a logic that processes transactions to \ac{C/S} registers.
 
 % Processing of read transactions
 
@@ -16,45 +16,108 @@ NVMe-specific traffic alongside with a logic that processes transactions to \ac{
 
 The DMA IP utilizes 3 of the 4 interfaces provided by the integrated block for PCI Express, namely
 \ac{RQ}, \ac{CQ}, \ac{CC}. Each on of these uses its own template of the TLP header that the DMA
-core needs to create or process. The \ac{RQ} header has a size of 4~DW and its format is depicted in
-Fig. XXX. The \emph{Address} field is aligned with respect to DWords since its two bottom bits are
-reserved\footnotemark. For \acp{MWr}, the \emph{Dword Count} field specifies the size of the payload
-following the header, whereas, for \acp{MRd}, it specifies the required amount of data that a
-Completer needs to send in its Completion. The type of a request is defined in the \emph{Request
-Type} field. The \emph{Function} field informs the PCIe IP which Function generated the request
-(more on that later). The last used field is the \emph{NoSnoop} bit located in the \emph{Attr}
-field. Asserting this bit instructs the the host CPU that the underlying address space the
-transaction is targeted to, does not require a hardware-enforced cache coherency (cite the PCIe
-spec). This means that the address space is not shared by any other device in the system. The
-\ac{RQ} interface is used to dispatch \ac{SQTDBL} and \ac{CQHDBL} updates to the NVMe registers.
+core needs to create or process. The \ac{RQ} header has a size of 4~DW and its format is depicted
+in~\cref{fig:pcie_tlp_rq_hdr}. The \emph{Address} field is aligned with respect to DWords since its
+two bottom bits are reserved\footnotemark. For \acp{MWr}, the \emph{Dword count} field specifies the
+size of the payload following the header, whereas, for \acp{MRd}, it specifies the required amount
+of data that a Completer needs to send in its Completion. The type of a request is defined in the
+\emph{Req type} field. The \emph{Func} field informs the PCIe IP which Function generated the
+request (more on that later). The last used field is the \emph{NoSnoop} bit which instructs the the
+host CPU that the underlying address space the transaction is targeted to, does not require a
+hardware-enforced cache coherency\cite{pcie_spec}. This means that the address space is not
+shared by any other device in the system. The \ac{RQ} interface is used to dispatch \ac{SQTDBL} and
+\ac{CQHDBL} updates to the NVMe registers.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-rq_hdr}
+    \caption{Format of the header used on the \acl{RQ} interface}
+    \label{fig:pcie_tlp_rq_hdr}
+\end{figure}
 
 \footnotetext{The x86\_64 architecture addresses its physical memory space with resolution to bytes.}
 
-The \ac{CQ} header (Fig. XXX) follows a similar format as the \ac{RQ} header where the user logic
-acts as a PCIe Completer. The \emph{Target Function} field indicates to which the Function is
-targeted. When multiple \acp{BAR} are used, the core puts index of the specific one in the \emph{BAR
-ID} field. The size of a targeted BAR is determined by the \emph{BAR Aperture} which serves as a
-mask for the address (for example, the value of 12 signifies that the BAR has a size of 4~KiB
-and, therefore, the address bits [63:12] can be ignored). Other attributes of this header are either
-reserved or used to create a response for \ac{MRd}.
+The \ac{CQ} header (\Cref{fig:pcie_tlp_cq_hdr}) follows a similar format as the \ac{RQ} header where
+the user logic acts as a PCIe Completer. The \emph{Target function} field indicates to which
+Function a request is targeted. When multiple \acp{BAR} are used, the core puts index of the
+specific one in the \emph{BAR ID} field. The size of a targeted BAR is determined by the \emph{BAR
+Aperture} which serves as a mask for the address (for example, the value of 12 signifies that the
+BAR has a size of 4~KiB and, therefore, the address bits [63:12] can be ignored). Other fields
+of this header are either reserved or used to create a response for \ac{MRd}.
 
-% TODO: Explain, how the byte address can be acquired from the TUSER signal
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-cq_hdr}
+    \caption[Format of the header used on the \acl{CQ} interface]{Format of the header used on the
+      \acl{CC} interface. The yellow fields are used by the DMA
+      Iuventus core itself whereas the green ones are only used to create the CC header.}
+    \label{fig:pcie_tlp_cq_hdr}
+\end{figure}
 
 For posted requests, such as \ac{MRd}, the response is dispatched on the \ac{CC} interface by using
-the 3~DW TLP header as in Fig. XXX. The header may be followed by a payload. The \emph{Address} is a
-byte-level address of the first byte of the memory block being transferred. Each completion
-transferes a status of either \emph{Successful Completion}, \emph{Unsupported Request} or
-\emph{Completer Abort} in the \emph{Completion Status} field. The size of the payload is specified
-in the \emph{Dword Count} field. Similar to the Target Function field in the RQ header, there is an
-index of a completing Function in the \emph{Completer ID} fields. Furthermore, there are multiple
-fields that need to be copied from the Requester TLP header, such as \ac{AT}, \emph{Requester ID},
-\emph{Tag}, \ac{TC} and \emph{Attributes} in order that the Requester correctly classifies the
-received Completion. This applies especially for the Tag field which marks all Completions for a
-specific Request. A Completion can be dispatch in multiple TLPs, especially if the value of MRRS
+the 3~DW TLP header in~\cref{fig:pcie_tlp_cc_hdr}. The header may be followed by a payload. The
+\emph{Address} is a byte-level address of the first byte of the memory block being transferred. The
+size of the payload is specified in the \emph{Dword count} field. Because the CQ header contains
+only DWord-aligned address, the DMA logic needs to calculate the byte-level offset by reading the
+\emph{TUSER} signal of the AXI-Stream bus on the CQ interface which contains the \ac{FBE} as a mask
+of valid bytes int the first DWord of the payload. The byte offset is then adjusted by factoring
+initial valid/invalid bytes in the calculation. There is another field used, namely the \ac{LBE}
+which is located in the same AXI-Stream signal. This mask serves for the last DWord of the payload
+to distinguish valid bytes. An exact byte length of the payload can be calculated by using the Dword
+count, \ac{FBE} and \ac{LBE} fields.
 
+Each completion transfers a status of either \emph{Successful Completion}, \emph{Unsupported
+Request} or \emph{Completer Abort} in the \emph{Status} field. Similar to the Target Function field
+in the RQ header, there is an index of a completing Function. Other than that, there are multiple
+fields that need to be copied from the Requester TLP header, such as \ac{AT}, \emph{Requester ID},
+\emph{Tag}, \ac{TC} and \emph{Attributes} in order that the Completion is correctly routed to the
+Requester and then correctly classified within its internal system. This applies especially for the
+Tag field which marks all Completions for a specific Request. A Completion can be dispatched in
+multiple TLPs (especially if the MRRS of the Completer is bigger that the MPS value) which is
+controlled using the \emph{Byte count} field. The value indicates the remaining amount of bytes that
+are needed to complete a request including the length of the current payload. The last Completion
+TLP has hast the value of \emph{Byte count} equal to the byte-length of its payload.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-cc_hdr}
+    \caption[Format of the header used on the \acl{CC} interface]{Format of the header used on the
+      \acl{CC} interface. The yellow fields are generated by the DMA
+      Iuventus core itself whereas the green ones are copied from the CQ header.}
+    \label{fig:pcie_tlp_cc_hdr}
+\end{figure}
+
+\section{Software configuration}
+
+This thesis utilizes the \emph{NDK-FPGA} framework developed by \emph{CESNET, a.l.e.}\cite{ndk_fpga_github}. This
+framework serves as a development platform for datacenter-grade FPGA acceleration cards. In order to
+provide the software control, the \emph{NDK-SW} package is delivered besides the previous framework\cite{ndk_sw_github}.
+This package allows to access internal \ac{C/S} registers of various components within the FPGA
+logic from userspace. Additionally, this thesis utilizes the \ac{SPDK} framework in order to correctly
+configure an NVMe device and establish a \ac{P2P} communication chain between an accelerator card
+and the storage drive. SPDK is a userspace framework to create high-performance applications where
+drivers are running in the userspace\cite{spdk_paper}. This enables fast prototyping without the need to operate with
+kernel modules which can cause fatal system failures if not done carefully.
+
+A device that is normally maintained by a kernel driver can only be accessed by a defined API that
+usually utilizes the \emph{sysfs} filesystem or, when used in custom applications, the \emph{ioctl}
+calls with defined flags. Upon every modification of such driver, it needs to be compiled and inserted
+into the kernel not to mention the limited possibilities of debugging. This mechanism, however, prevents malicious applications
+from accessing the MMIO resources directly. In order to move all of the control to the userspace, a device needs
+to be unbound from a particular driver and bound to a new driver\footnotemark. The Linux kernel stack provides two
+"dummy" drivers that serve the purpose of this thesis. If \ac{IOMMU} is disabled, the system operates only with physical addresses,
+the device needs to be bound to the \verb|uio_pci_generic| driver, whereas, if enabled, the system operates
+with \acp{IOVA} and the \verb|vfio-pci| driver needs to be used. Both of these drivers exposes devices' BARs to the userspace
+where they can be managed by standard memory operations. Since using the former approach with disabled IOMMU, the
+application need to be run as the root user.
+
+\footnotetext{For concrete steps of how to unbind a device, check the~\cref{chap:spdk_conf}}
+
+\subsection{Memory partitioning}
+
+% TODO Reason why two Functions and multiple BARs are used
 Since there is only one PCIe IP per one physical connector, all of the requests pass through same
 interfaces to the user logic and have to be split according to the function index and the BAR ID.
 
-% TODO: Picture of RQ header
+\section{Communication model}
 
-% Reason why two Functions are used

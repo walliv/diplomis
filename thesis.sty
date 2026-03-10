@@ -200,7 +200,7 @@
 \ProcessOptions\relax
 
 %% Vlozeni balicku babel
-\RequirePackage[main=\orig@lang,\tran@lang]{babel}
+\RequirePackage[main=\orig@lang]{babel}
 %% Vektorove fonty Latin Modern, nastupce puvodnich Knuthovych Computern Modern fontu
 \RequirePackage{lmodern}
 %% Dodatecne symboly
@@ -478,7 +478,7 @@
 %%% parametr je nazev zkratky
 %\newcommand{\acl}[1]%
 %  {\acl{#1}}
-  
+
 %% Formatovani kratke verze zkratky
 \renewcommand*{\acsfont}[1]{%
   \fontshape{\updefault}\selectfont% vzdy stojate
@@ -560,9 +560,9 @@
   \par\noindent%
   Jako autor%
   \ifnum\@pohlavi=1 ka\ \else\ \fi
-  uveden\'{e} z\'{a}v\v{e}re\v{c}n\'{e} pr\'{a}ce	
+  uveden\'{e} z\'{a}v\v{e}re\v{c}n\'{e} pr\'{a}ce
     d\'{a}le prohla\v{s}uji, \v{z}e v~souvislosti s~vytvo\v{r}en\'{\i}m
-    t\'{e}to  z\'{a}v\v{e}re\v{c}n\'{e} pr\'{a}ce	
+    t\'{e}to  z\'{a}v\v{e}re\v{c}n\'{e} pr\'{a}ce
   jsem neporu\v{s}il%
 	\ifnum\@pohlavi=1 a\ \else\ \fi
 	autorsk\'{a} pr\'{a}va t\v{r}et\'{\i}ch osob, zejm\'{e}na jsem nezas\'{a}hl%
@@ -961,7 +961,7 @@ a~som si plne vedom%
 % Kontrola nastaveni
   \ifx\author@prijmeni\relax
      \@latex@warning@no@line{Nezadano jmeno autora \noexpand\author/Unknown author}%
-     \author{X}{YYY}     
+     \author{X}{YYY}
   \fi
   \ifx\lang@study\lang@english\else
   \@ifundefined{@pohlavi}{
@@ -971,7 +971,7 @@ a~som si plne vedom%
   \fi
   \ifx\advisor@prijmeni\relax
      \@latex@warning@no@line{Nezadano jmeno vedouciho \noexpand\advisor/Unknown advisor}%
-     \advisor{X}{YYY}     
+     \advisor{X}{YYY}
   \fi
 
   \ifx\captionsczech\undefined\relax\else
@@ -1526,7 +1526,7 @@ a~som si plne vedom%
         \university@orig@lang
       }%%%
 
-      \vskip 0mm plus 1fill 
+      \vskip 0mm plus 1fill
       \noindent
       \parbox[t][100mm][s]{\linewidth}{%%%
         \centering
@@ -1718,7 +1718,7 @@ a~som si plne vedom%
 		\university@orig@lang,
 		\faculty@orig@lang,
 		\department@orig@lang,
-		\@grade. 
+		\@grade.
 		%\pocet@stran~\citace@stran. %podle nové ISO ČSN 690:2022 se již počty stran neuvádějí
 		\csname citace@vedouci@\orig@lang\endcsname
 	}%%%
@@ -1802,18 +1802,18 @@ a~som si plne vedom%
 	      {%%%
 	        \large\sffamily\bfseries\MakeUppercase{\abstractname}%
 	      }%%%
-	
+
 	      \medskip
 	      \parbox{\linewidth}{%%%
 	        \sffamily
 	        \abstract@tran@lang
 	      }%%%
-	
+
 	      \bigskip
 	      {%%% prostredi kvuli zmene pisma
 	        \large\sffamily\bfseries\MakeUppercase{\keywordsname}%
 	      }%%%
-	
+
 	      \medskip
 	      \parbox{\linewidth}{%%%
 	        \sffamily
@@ -1829,18 +1829,18 @@ a~som si plne vedom%
 	      {%%%
 	        \large\sffamily\bfseries\MakeUppercase{\abstractname}%
 	      }%%%
-	
+
 	      \medskip
 	      \parbox{\linewidth}{%%%
 	        \sffamily
 	        \abstract@tran@lang
 	      }%%%
-	
+
 	      \bigskip
 	      {%%% prostredi kvuli zmene pisma
 	        \large\sffamily\bfseries\MakeUppercase{\keywordsname}%
 	      }%%%
-	
+
 	      \medskip
 	      \parbox{\linewidth}{%%%
 	        \sffamily
@@ -1937,7 +1937,7 @@ a~som si plne vedom%
     \csname prohlasenitext@\orig@lang\endcsname
 
     \vspace{4em}%
-    
+
     \begin{center}
     \begin{tabular}{lc}
     	\mistoprohlaseni\hspace{1em}\makebox[8em][c]{\dotfill}\hspace{5em} &
