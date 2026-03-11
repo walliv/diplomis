@@ -374,9 +374,6 @@ queue-pair has a fixed ID of 0 and every other I/O queue pair reserves an ID of 
     \label{fig:nvme_init_system}
 \end{figure}
 
-% Where are the queues stored
-% Depict NVMe Read/Write in the timing diagram
-
 \section{Principles of operation}
 
 One queue 2 pointers for its operation, a \emph{Head doorbell} and a \emph{Tail doorbell}. A
@@ -441,18 +438,18 @@ need to be fetched (as for the write command) or to which the data are copied fr
 for the read command). The data pointer is split into two \ac{PRP} entries depending on how many
 memory pages contain the operated data in host memory, thus how big the transfer is going to be. If
 the transfer fits into one page, only \ac{PRP1} is used and it points to the start of the user data.
-In case a transfer, thus operated data, spans over 2 memory pages, the \ac{PRP2} is used as well to
-point to the second page. If a transfer spans more than 2 pages, the \ac{PRP2} changes its meaning
-to point to the \emph{PRP List} which contains pointers to every other page that contains to the
-user data. The following two Dwords (DW10 and DW11) contain the \ac{SLBA} field in the namespace the
-last usable field in DW12 contains the \ac{NLB} to copy. This size determines a size of a transfer
-for a currently processed command. The size of a transfer is limited by the NVMe controller and
-every master has to consult controller parameters in order to not submit larger transfers. When
-larger data  chunks are required than a transfer can process, multiple commands have to be
-submitted.
+In case a transfer spans over 2 memory pages, the \ac{PRP2} is used as well to point to the second
+page. If a transfer spans more than 2 pages, the \ac{PRP2} changes its meaning to point to the
+\emph{PRP List} which contains pointers to every other page that contains to the user data (meaning
+from the second one onwards). The following two Dwords (DW10 and DW11) contain the \ac{SLBA} field
+in the namespace the last usable field in DW12 contains the \ac{NLB} to copy. This size determines a
+size of a transfer for a currently processed command. The size of a transfer is limited by the NVMe
+controller and every master has to consult controller parameters in order to not submit larger
+transfers. When larger data  chunks are required than a transfer can process, multiple commands have
+to be submitted.
 
-\footnotetext{In terms of more recent specification revisions, these sets use a \emph{memory-based}
-    transport which differs from \emph{message-based} transport. While the first type of transport is
+\footnotetext{In terms of more recent specification revisions, these sets use the \emph{memory-based}
+    transport which differs from the \emph{message-based} transport. While the first type of transport is
     typical for PCIe, newer specifications allow to attach NVM devices to other fabrics, like RDMA or
     Ethernet, that use the second type of transport. These are part of the  \ac{NVMe-oF} standard
     published separately.}
@@ -530,7 +527,7 @@ Since multiple queues can be initialized for a single NVMe controller, multiple 
 execute commands on the controller. Since the proposed implementation in this thesis introduces a
 direct NVMe device access from an FPGA acceleration card using the PCIe \ac{P2P} transfer, it
 contains a potential to access multiple NVMe devices (the 1-to-M topology) as well as to access
-multiple NVMe devices from multiple acceleration cards, thus implementing an N-to-M
+multiple NVMe devices from multiple acceleration cards, thus implementing an M-to-N
 topology\footnotemark\@ as seen in~\cref{fig:nvme_multipath}. This feature that allows to access one
 NVMe device from multiple masters is sometimes called \emph{multi-pathing}.
 

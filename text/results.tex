@@ -133,15 +133,15 @@ moved entirely to the PCIe BARs of the accelerator. Such system is depicted in f
 the mapping of PCIe BARs of the accelerator is constant the \ac{PRP1} and \ac{PRP2} fields are
 always pointing either to the \emph{Read Buffer} (which contains data that the NVMe needs to fetch
 as a part of the write command)) or to the \emph{Write Buffer} (which is a reserved space where the
-NVMe uploads its data as a part of the read command). These buffers are allocated in BARs 3 and 2
+NVMe uploads its data as a part of the read command). These buffers are allocated in BARs~3 and 2
 respectively. The queue pair is located in the first two \acp{BAR} where Submission Queue is located
-on BAR 0 and Completion Queue on BAR 1. By mapping all of these data structures to the PCIe device,
+on BAR~0 and Completion Queue on BAR~1. By mapping all of these data structures to the PCIe device,
 the copying of user data through host memory is entirely removed.
 
 The \emph{NDK-SW} framework provides its own kernel driver in order to operate on the PCIe device
 and to access its \ac{C/S} registers. However, in order to establish a P2P communication chain, the
 NVMe device as well as the FPGA accelerator need to be unbound. The unbinding simplifies the
-configuration of each device which directly exposes its BARs physical addresses and its PCIe
+configuration of each device which directly exposes its BARs' physical addresses and its PCIe
 Configuration Space. The NVMe device can be entirely unbound since no original kernel driver is used
 and everything considering a device initialization is handled by the SPDK framework. On the other
 hand, with regards to the FPGA accelerator, a different approach had to be chosen, namely to create
@@ -152,6 +152,111 @@ P2P communication chain can be used besides that. Since there is only one PCIe I
 connector on the FPGA chip, all of the requests pass through same interfaces to the user logic and
 have to be split according to the function index and the BAR ID.
 
+\subsection{Queue initialization}
+
+This step relies on the initial configuration of the controller done by the SPDK framework.
+Especially, this involves the allocation and assignment of Admin queue-pair whose addresses are
+stored in the controller's registers (remember that these registers reside in the PCIe BAR of the
+NVMe drive). The NVMe controller has two ways of configuration, either through its registers (works
+every time) or through its Admin queue pair (after it gets allocated) using the \emph{Set Features}
+command. The following list describes the specific case for the solution presented in this thesis
+and not the general one presented in the specification.
+
+\begin{enumerate}
+    \item The \ac{CAP} register indicates the maximum supported size of its queues and the
+    requirement if queues need to be physically contiguous.
+    \item The host allocates space for the Admin Completion and Submission queues with its preferred
+    size and writes these to the \ac{AQA} register. Their base addresses are then written to the
+    \ac{ACQ} and \ac{ASQ} registers. The Admin queue pair has an implicitly reserved Queue ID 0.
+    \item The host submits a \emph{Set Features} command with the \emph{Number of Queues} attribute
+    set to the desired amount of I/O Submission and I/O Completion queues. The controller responds
+    with the amount of queues that it supports which can be equal or lower than the number of the
+    queues requested.
+    \item The Queue ID 1 is reserved for the queue pair residing in the FPGA accelerator. This
+    reservation is not only internal to the SPDK framework but also necessary for correct
+    registration of queues on the NVMe controller to keep consistent state in the whole stack
+    when more queues need to be added\footnotemark.
+    \item The host allocates I/O Completion queue in the BAR~1 of the FPGA accelerator and clears
+    its content. The clearing is necessary since the DMA Iuventus logic could otherwise process past
+    entries that have a \emph{Phase Tag} field set to 1 (which is the initial value that is
+    considered valid after the queue initialization).
+    \item The \emph{Create I/O Completion Queue} command is submitted in order to register the
+    queue on the controller.
+    \item The host allocates an I/O Submission queue in the BAR~0 of the FPGA accelerator and
+    submits the \emph{Create I/O Completion Queue} command to register this queue on the controller.
+    \item The Queue ID 2 is reserved for the queue pair for the host to create and maintain a
+    filesystem on the NVMe storage.
+    \item The host allocates regions in the host memory that are going to hold its I/O queue pair.
+    The Completion queue is cleared in the same way as in the case of the FPGA accelerator.
+    \item The queues are registered in the same order as previously, first the Completion queue,
+    then the Submission queue.
+    \item The system is now ready to operate and write/read data to/from the non-volatile storage.
+\end{enumerate}
+
+\footnotetext{Remember that the Queue ID is used in the \ac{CQE} as a part of a command's unique
+    identifier since multiple I/O Submission queues can share one I/O Completion queue}
+
+% TODO : Mention that interrupts are disabled
+
 \section{Communication model}
 
-% TODO: Creation of queues
+The P2P chain between the FPGA accelerator and the NVMe drive has been partially established by
+creating the accelerator-owned queue pair. In order to perform the full P2P communication, the host
+allocates the BAR~2 and BAR~3 of the accelerator and publishes its physical addresses to the
+Iuventus module so the submitted commands to the NVMe target the internal buffers of the FPGA.
+
+\subsection{Read command}
+
+The read command to the NVMe consists of several steps as seen in figure XXX. The command is
+submitted by writing one \ac{SQE} data structure to the Submission queue and updating the
+corresponding \ac{SQTDBL} (in case of the accelerator queue pair, this would be SQ1TDBL, whereas for
+the host-side, the SQ2TDBL). Afterwards, the controller sends a \ac{MRd} to the Submission queue to
+fetch the command. The requester (either the DMA Iuventus module or the host software) responds with
+one \ac{Cpl} TLP packet. The controller then proceeds to execute the command. The read command
+targets either the accelerator's or the host's \emph{Write buffer} which is specified in command's
+\ac{PRP1} and \ac{PRP2} fields. The NVMe controller can send the data in one or multiple \acp{MWr}.
+Finally, to signalize the end of command execution, a \ac{CQE} is written to the Completion queue.
+As seen in the same figure, the requester can submit multiple commands which are then processed on
+the controller. To inform the controller that all completions have been read from the Completion
+queue, the requester updates the value of the corresponding CQHDBL in controller's registers
+(similar to the SQTDBL, the accelerator updates the CQ1HDBL value whereas the host the CQ2HDBL
+value).
+
+If it needs to be used, the \emph{PRP List} has been created in the host memory as part of FPGA
+device initialization. This list resides in the host memory for every requester regardless if the
+accelerator or the host engages in the communication. The values of its elements for the FPGA
+accelerator are constant (that is because the mapping of BARs does not change) whereas for the host
+side, it is created on the go\footnotemark.
+
+% TODO: Mention limitation of the maximum transfer size that can be dispatched within one IO Command
+
+\footnotetext{The API of the SPDK framework already contains built-in functions to dispatch
+read/write commands to the NVMe device and the maintenance of the PRP List is, therefore, left to
+its own devices.}
+
+\subsection{Write command}
+
+The write command contains additional steps with comparison to the read command as seen in fig XXX.
+The NVMe controller fetches the command in a similar manner, by receiving an SQTDBL update,
+dispatching the \ac{MRd} to the requester and receiving completions with \ac{SQE} data. Afterwards,
+as a part of command execution, the controller dispatches one or multiple \acp{MRd} to requester's
+\emph{Read buffer} to fetch the data that are received consequently in one or multiple \acp{Cpl}.
+The end of a command execution is marked by the write of a \ac{CQE} with the status of the
+execution. Similarly, the controller can fetch multiple commands and process them as a batch,
+dispatching the completion every time. The requester then, after processing the \ac{CQE}, updates
+the corresponding value of \ac{CQHDBL}. Optionally, the requester can issue a \emph{Flush} command
+to permanently store the data on the \ac{NVM} which can be seen in the same figure as well. This
+command can be issued on devices that use a separate write cache. It is not necessary to explicitly
+use this command unless synchronization between two requesters is required. The flushing can be left
+on the automatic mechanism or the controller which also flushes the whole content of a cache when it
+shuts down.
+
+\section{Hardware implementation}
+
+% TODO : schema of the FPGA system
+% TODO : detailed description of every component
+
+\section{Evaluation}
+
+% TODO : Latency
+% TODO : Resource consumption (DMA Iuventus alone and the whole design with PCI Express IP)
