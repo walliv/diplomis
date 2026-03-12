@@ -111,7 +111,7 @@ in~\cref{tab:res_consumption}.
     \toprule
     \multirow{2}{*}{Version} & \multicolumn{2}{c}{Line code} & \multicolumn{5}{c}{Link throughput [GBps]} \\
     \cmidrule(lr){2-3} \cmidrule(lr){4-8}
-            & Electrical & Logical    & x1      & x2     & x4     & x8     & x16    \\
+               & Electrical & Logical    & x1      & x2     & x4     & x8     & x16    \\
     \midrule
     Gen3       & NRZ        & 128b/130b  & 0.985   & 1.969  & 3.938  & 7.877  & 15.754 \\
     Gen4       & NRZ        & 128b/130b  & 1.969   & 3.938  & 7.877  & 15.754 & 31.508 \\
@@ -416,8 +416,7 @@ The \ac{SQE} is created by a master by following a format in~\cref{fig:nvme_sqe}
 defines a command within a single NVMe controller. The entry has a length of 64~B (16~DW) with
 necessary information for a controller to process a command. There are two sets of commands defined
 by the NVMe specification, namely \emph{Admin Command Set} and \emph{NVM Command Set}\footnotemark.
-The mostly used used commands in this thesis on runtime are read and write from/to the \ac{NVM} that
-are described in the following paragraph.
+The mostly used commands in this thesis on runtime are read and write from/to the \ac{NVM}.
 
 \begin{figure}[!h]
     \centering

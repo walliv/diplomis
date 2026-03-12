@@ -49,8 +49,8 @@ of this header are either reserved or used to create a response for \ac{MRd}.
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-cq_hdr}
     \caption[Format of the header used on the \acl{CQ} interface]{Format of the header used on the
-      \acl{CC} interface. The yellow fields are used by the DMA
-      Iuventus core itself whereas the green ones are only used to create the CC header.}
+        \acl{CC} interface. The yellow fields are used by the DMA
+        Iuventus core itself whereas the green ones are only used to create the CC header.}
     \label{fig:pcie_tlp_cq_hdr}
 \end{figure}
 
@@ -59,12 +59,12 @@ the 3~DW TLP header in~\cref{fig:pcie_tlp_cc_hdr}. The header may be followed by
 \emph{Address} is a byte-level address of the first byte of the memory block being transferred. The
 size of the payload is specified in the \emph{Dword count} field. Because the CQ header contains
 only DWord-aligned address, the DMA logic needs to calculate the byte-level offset by reading the
-\emph{TUSER} signal of the AXI-Stream bus on the CQ interface which contains the \ac{FBE} as a mask
-of valid bytes int the first DWord of the payload. The byte offset is then adjusted by factoring
-initial valid/invalid bytes in the calculation. There is another field used, namely the \ac{LBE}
-which is located in the same AXI-Stream signal. This mask serves for the last DWord of the payload
-to distinguish valid bytes. An exact byte length of the payload can be calculated by using the Dword
-count, \ac{FBE} and \ac{LBE} fields.
+\emph{TUSER}\cite{axis_spec} signal of the AXI-Stream bus on the CQ interface which contains the
+\ac{FBE} as a mask of valid bytes int the first DWord of the payload. The byte offset is then
+adjusted by factoring initial valid/invalid bytes in the calculation. There is another field used,
+namely the \ac{LBE} which is located in the same AXI-Stream signal. This mask serves for the last
+DWord of the payload to distinguish valid bytes. An exact byte length of the payload can be
+calculated by using the Dword count, \ac{FBE} and \ac{LBE} fields.
 
 Each completion transfers a status of either \emph{Successful Completion}, \emph{Unsupported
 Request} or \emph{Completer Abort} in the \emph{Status} field. Similar to the Target Function field
@@ -198,7 +198,7 @@ and not the general one presented in the specification.
 
 % TODO : Mention that interrupts are disabled
 
-\section{Communication model}
+\section{Command submission}
 
 The P2P chain between the FPGA accelerator and the NVMe drive has been partially established by
 creating the accelerator-owned queue pair. In order to perform the full P2P communication, the host
@@ -207,8 +207,8 @@ Iuventus module so the submitted commands to the NVMe target the internal buffer
 
 \subsection{Read command}
 
-The read command to the NVMe consists of several steps as seen in figure XXX. The command is
-submitted by writing one \ac{SQE} data structure to the Submission queue and updating the
+The read command to the NVMe consists of several steps as seen in~\cref{fig:nvme_rd_cmd}. The
+command is submitted by writing one \ac{SQE} data structure to the Submission queue and updating the
 corresponding \ac{SQTDBL} (in case of the accelerator queue pair, this would be SQ1TDBL, whereas for
 the host-side, the SQ2TDBL). Afterwards, the controller sends a \ac{MRd} to the Submission queue to
 fetch the command. The requester (either the DMA Iuventus module or the host software) responds with
@@ -221,6 +221,15 @@ the controller. To inform the controller that all completions have been read fro
 queue, the requester updates the value of the corresponding CQHDBL in controller's registers
 (similar to the SQTDBL, the accelerator updates the CQ1HDBL value whereas the host the CQ2HDBL
 value).
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/nvme_prot-read.pdf}
+    \caption[Read command submission]{Read command submission. The indexing of \acp{SQE} is
+    completely arbitrary since there is no ordering of commands on the NVMe controller's side if
+    multiple commands are fetched.}
+    \label{fig:nvme_rd_cmd}
+\end{figure}
 
 If it needs to be used, the \emph{PRP List} has been created in the host memory as part of FPGA
 device initialization. This list resides in the host memory for every requester regardless if the
@@ -236,27 +245,265 @@ its own devices.}
 
 \subsection{Write command}
 
-The write command contains additional steps with comparison to the read command as seen in fig XXX.
-The NVMe controller fetches the command in a similar manner, by receiving an SQTDBL update,
-dispatching the \ac{MRd} to the requester and receiving completions with \ac{SQE} data. Afterwards,
-as a part of command execution, the controller dispatches one or multiple \acp{MRd} to requester's
-\emph{Read buffer} to fetch the data that are received consequently in one or multiple \acp{Cpl}.
-The end of a command execution is marked by the write of a \ac{CQE} with the status of the
-execution. Similarly, the controller can fetch multiple commands and process them as a batch,
-dispatching the completion every time. The requester then, after processing the \ac{CQE}, updates
-the corresponding value of \ac{CQHDBL}. Optionally, the requester can issue a \emph{Flush} command
-to permanently store the data on the \ac{NVM} which can be seen in the same figure as well. This
-command can be issued on devices that use a separate write cache. It is not necessary to explicitly
-use this command unless synchronization between two requesters is required. The flushing can be left
-on the automatic mechanism or the controller which also flushes the whole content of a cache when it
-shuts down.
+The write command contains additional steps with comparison to the read command as seen
+in~\cref{fig:nvme_wr_cmd}. The NVMe controller fetches the command in a similar manner, by receiving
+an \ac{SQTDBL} update, dispatching the \ac{MRd} to the requester and receiving completions with
+\ac{SQE} data. Afterwards, as a part of command execution, the controller dispatches one or multiple
+\acp{MRd} to requester's \emph{Read buffer} to fetch the data that are received consequently in one
+or multiple \acp{Cpl}. The end of a command execution is marked by the write of a \ac{CQE} with the
+status of the execution. Similarly, the controller can fetch multiple commands and process them as a
+batch, dispatching the completion every time. The requester then, after processing the \ac{CQE},
+updates the corresponding value of \ac{CQHDBL}. Optionally, the requester can issue a \emph{Flush}
+command to permanently store the data on the \ac{NVM} which can be seen in the same figure as well.
+This command can be issued on devices that use a separate write cache. It is not necessary to
+explicitly use this command unless synchronization between two requesters is required. The flushing
+can be left on the automatic mechanism of the controller which also flushes the whole content of a
+cache when it shuts down.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[scale=1.3]{pict/nvme_prot-write.pdf}
+    \caption[Write command submission]{Write command submission. The indexing of \acp{SQE} is
+    completely arbitrary since there is no ordering of commands on the NVMe controller's side if
+    multiple commands are fetched.}
+    \label{fig:nvme_wr_cmd}
+\end{figure}
 
 \section{Hardware implementation}
 
-% TODO : schema of the FPGA system
-% TODO : detailed description of every component
+The hardware architecture enables full P2P communication between an FPGA accelerator and an NVMe
+device. This architecture is depicted in fig XXX. The architecture transports data in streaming
+buses rather than memory-mapped ones. The only exception is the \ac{MI} interface\cite{ndk_mi_spec}
+connected to the \verb|Software manager| that contains the \ac{C/S} registers to configure the DMA
+module. This operates on memory-mapped chunks of 32~bits. The streaming interfaces, namely
+\verb|CQ|, \verb|CC|, \verb|RQ|, \verb|Read Data| and \verb|Write Request + Data| follow the
+\ac{MFB} specification\cite{ndk_mfb_spec}.
 
-\section{Evaluation}
+Although the PCIe IP's interfaces conform to the AXI-Stream standard, this protocol had to be
+arbitrarily extended since, in order to provide higher throughput, the bus operates in the
+\emph{Straddling} mode. This mode splits a transfer\footnotemark\@ into two logical regions where
+each region can contain a start of a packet. If the first packet ends in the first region, the
+second packet can begin in the second region, thus effectively increasing throughput for packets
+that align is such way and, especially, for small packets that fit in one region. This extension
+includes adding more subsignals to the \verb|TUSER| while ignoring the \verb|TKEEP| signal since
+this only works when only one region is utilized.
 
+\footnotetext{One transfer corresponds to one bus beat, meaning a clock period when both TVALID and
+    TREADY are high, i.e. both the Transmitter and the Receiver are ready to transfer
+    data\cite{axis_spec}.}
+
+\ac{MFB} has been created to exactly address this issue of dispatching multiple packets in one clock
+cycle and does not need additional signals to facilitate that. A transfer consists out of multiple
+\emph{regions}, where each is composed of 1 or more \emph{blocks}. Each block contains then 1 or
+more \emph{items} and each of the items is n bits long. All of the provided interfaces of the PCIe
+IP have the same configuration, that is 2 regions, 1 block, 8 items and 32 bits\footnotemark\@ per
+item (referred to in a short form as the \emph{2,1,8,32} configuration) resulting in 512~bits. MFB
+consists of following signals:
+
+\footnotetext{Setting the item size to 32 bits is in accord with the PCIe interface operating with
+    DWords as the smallest atomic units.}
+
+\begin{description}
+    \item[DATA] containing packet payload.
+    \item[META] containing optional metadata to the packet. The metadata can be aligned either with
+    a SOF of a packet (default) or with an EOF.
+    \item[SOF] indicating which regions of a transfer contain a start of a packet.
+    \item[EOF] indicating which regions contain an end of a packet.
+    \item[SOF\_POS] Pointer for every region where the start of a packet is located. A packet can be
+    started with resolution to \emph{blocks}.
+    \item[EOF\_POS] Pointer for every region where the end of a packet is located. A packet can be
+    ended with resolution to \emph{items}.
+    \item[SRC\_RDY] When high, indicates that a transmitter wants to send data.
+    \item[DST\_RDY] When high, indicates the readiness of a receiver to accept data.
+\end{description}
+
+The interfaces to the user logic, namely \verb|Read Data| and \verb|Write Request + Data|, follow
+the \ac{MFB} specification as well but with a different configuration. Since highest throughput is
+no longer required and the smallest size of a memory block that can be requested is 512~B (i.e. one
+\ac{LBA}), the configuration has been set to \emph{1,1,64,8} which can be rewired to the standard
+AXI-Stream bus. All of the streaming buses run on 250~MHz clock provided by the PCIe IP and the same
+clock is used to drive all other systems of the DMA Iuventus module. The \ac{MI} interface runs on a
+slower, 100~MHz clock to relax timing constraints.
+
+\subsection{Software initialization}
+
+The register map for the DMA Iuventus module is listed in~\cref{chap:iuventus_reg_map}. The
+component gets configured by the host software by setting the following registers in the
+\verb|Software manager|:
+
+\begin{itemize}
+    \item \verb|DBL Mask| that serves as a mask of all Doorbell pointers. This mask is determined by
+    the sizes of each queue.
+    \item \verb|SQTDBL Base Addr H| and \verb|SQTDBL Base Addr L| that contain the address of
+    \verb|SQ1TDBL| in the NVMe BAR.
+    \item \verb|CQHDBL Base Addr H| and \emph|CQHDBL Base Addr L| that contain the address of
+    \verb|CQ1HDBL| in the NVMe BAR.
+    \item \verb|RD Buff Base Addr H| and \verb|RD Buff Base Addr L| that contain the address of the
+    read buffer allocated in the accelerator's BAR~3. This address needs to be supplied by the
+    configuration software since the PCIe IP does not provide an interface to read values in BARs of
+    the PCIe Configuration Header.
+    \item \verb|RD Buff PRP List Base H| and \verb|RD Buff PRP List Base L| that contain the base
+    address of the read buffer's PRP List (this list resides in the host memory).
+    \item \verb|WR Buff Base Addr H| and \verb|WR Buff Base Addr L| that contain the address of the
+    write buffer allocated in the accelerator's BAR~2. This address needs to be supplied by the
+    configuration software for the same reason as the address of the read buffer.
+    \item \verb|WR Buff PRP List Base H| and \verb|WR Buff PRP List Base L| that contain the base
+    address of the write buffer's PRP List (this list resides in the host memory).
+    \item \verb|LBA Num Mask| that serves as a limit of the amount of LBAs that can be transferred
+    within a single NVMe command (i.e. the maximum amount that can be assigned to the \ac{NLB}
+    field in a \ac{SQE}).
+    \item \verb|LBA Space Size H| and \verb|LBA Space Size L| that contain the total amount of
+    usable LBAs on the provided Namespace regardless of if some \acp{LBA} have already been written
+    in the past.
+\end{itemize}
+
+Finally, the Iuventus module is activated by assigning bit~0 in the \verb|Control| register to 1
+which is acknowledged by the module setting bit~0 in the \verb|Status| register to 1. The
+acknowledgement happens after all internal components are initialized.
+
+\subsection{Read command submission}
+
+The user logic requests a read from the NVMe device on the \verb|Read Request| interface (Fig
+XXX). This is achieved by setting the amount of LBAs to read on the \verb|NVME_RD_REQ_LBA_NUM| and
+the starting address of the first LBA on \verb|NVME_RD_REQ_LBA_PTR| inputs. The valid request is
+confirmed by setting \verb|NVME_RD_REQ_VLD| to high which is acknowledged by the
+\verb|Operation control| component by asserting \verb|NVME_RD_REQ_RDY|. Because of the hardware
+constraints explained further, the amount of LBAs that can be requested by the user logic on the
+\verb|NVME_RD_REQ_LBA_NUM| is capped to 256 (i.e. this signal has a width of 8 bits).
+
+After \verb|Operation control| acknowledges the request, it checks that the request size with its
+starting pointer does not exceed the Namespace size. The component decides the values of \ac{PRP1}
+and \ac{PRP2} fields for the command based on the amount of memory pages that will be transferred.
+After that, the NVMe Read command is created in the \verb|SQ Cmd Dispatcher| from the provided
+parameters that were previously assigned to the \ac{C/S} registers.SQ Cmd Dispatcher maintains an
+internal FIFO of available \acp{CID} that are assigned to every dispatched command. Reading the
+status of this FIFO helps to assert the amount of flying commands that are currently
+executed/waiting on the NVMe controller. This status is available in the \ac{C/S} registers as the
+\verb|TAG FIFO Status| field.
+
+The command is then stored in the \verb|Sub Queue| located in the \verb|PCIe Transaction Buffer|.
+Originally, this buffer has been developed as a part of the DMA Calypte project to store incoming
+\acp{TLP} on the \ac{CQ} interface. The advantage of this buffer is the ability to store on a link
+data rate without blocking with address resolution to bytes while also able to store two individual
+packets (this stems from the two regions the CQ bus is divided into where each packet can address a
+different location). Because the reading side of the \verb|PCIe Transaction Buffer| has been
+designed to put data on a streaming bus, this component is used twice in the Iuventus module even
+when it is underutilized for the Submission queue/Read buffer side. The constraint of capping the
+amount of \acp{LBA} being requested is caused by the maximum size of the memory array in this
+component which consists of 64~BRAM blocks (since the bus is 64~bytes wide and byte-level
+addressability is needed). This array has an overall capacity of 256~KiB and it is split into two
+sectors where one is occupied by the Submission/Completion queue, while the other with the
+Read/Write buffer. The size of each sector corresponds to exactly 256~LBAs.
+
+As soon as the \verb|SQ Cmd Dispatcher| creates the command and stores it in the Submission queue it
+sends an update of the \ac{SQTDBL} to the \verb|Doorbell updater|. This queues this update for a
+dispatch which ist then dispatched whenever the \ac{RQ} interface is ready. After restart or a long
+period where the pointer has not been updated, the update is dispatched immediately. After
+dispatching one update, the delay counter is activated. The pointer can be further updated during
+this delay but the counter dispatches the final value after the delay comes to an end. This
+mechanism has been added to enable submitting multiple commands and then fetching them in batch.
+This reduces the pressure on the PCIe interface by lowering the amount of \acp{TLP} containing only
+synchronization data.
+
+The \acl{MRd} from the NVMe controller arrives on the CQ interface and is routed from the
+\verb|CQ Metadata Extractor| to the \verb|PCIe Header FIFO|. The Metadata extractor calculates
+the exact byte address and splits TLPs based on the BAR and the request type. The header FIFO
+receives all of the read requests that can target either the Read Buffer or the Submission Queue.
+The read requests are processed by the \verb|PCIe Read Responder| that is able to read data of
+arbitrary length from the transaction buffer and put them on the \ac{CC} interface. If the size of
+data exceeds 128~B, the payload gets segmented into 128-byte chunks which are dispatched as separate
+\ac{Cpl} \acp{TLP}, effectively utilizing the \emph{Dword count} and \emph{Byte count} fields in the
+\ac{CC} \ac{TLP} header. A single command in a queue is usually read by just one \ac{MRd} from the
+NVMe controller.
+
+After some delay, the controller sends data from the \ac{NVM} that had been requested in the
+processed command. These data are routed towards and written to the \verb|Write Buffer|. Finally,
+the controller sends a \ac{CQE} with the status of the operation. The \verb|CQE Processor| component
+detects the received \ac{CQE} based of the current value of the \ac{CQHDBL} and the \emph{Phase
+tag}. The component then returns the status of the command to the \verb|Operation control| and
+updates the value of \ac{CQHDBL}\footnotemark in the \verb|Doorbell updater|. When the returned
+status is successful, the \verb|Operation control| then reads the data from the \verb|Write buffer|,
+thus publishing them to the user logic. Additionally, the status of the command is returned on the
+\verb|Operation status| interface. When the \verb|OP_STAT_TYPE| signal on this interface is set
+high, the status of the last read read request is returned, otherwise, when set to low, the status
+of the last write request is returned. For the accurate distinction of status, the
+\verb|OP_STAT_CODE| signal output the status of the operation which are listed
+in~\cref{tab:op_stat_codes}. A valid status is signalized by setting the \verb|OP_STAT_VLD| output
+high for a single clock cycle.
+
+\footnotetext{The values of Doorbell pointers can be found in the registers listed in
+\cref{chap:iuventus_reg_map}. The value of \ac{CQTDBL} is not provided since it is internal to the
+NVMe controller and it is not necessary for the correct processing of \acp{CQE}.}
+
+\begin{table}[t]
+    \centering
+    \caption{Operation status codes as output by DMA Iuventus}
+    \label{tab:op_stat_codes}
+    \begin{tabular}{cl}
+    \toprule
+    Code       & Description                                                     \\
+    \midrule
+    0b00       & Success                                                         \\
+    0b01       & General fault (more information available in status registers)  \\
+    0b10       & LBA Out of Range                                                \\
+    0b11       & Reserved for future use                                         \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Write command submission}
+
+A write request is initiated by directly writing a packet on the \verb|Write Request+Data| interface
+which is a \ac{MFB} bus with the \verb|META| signal containing a pointer of the LBA to which the
+packet data should be written. This pointer travels with the start of every packet. The Iuventus
+module checks the length of an incoming packet which is provided for the \verb|Operation control|
+after the packet ends while the packet data have been written to the \emph{Read buffer}. The packet
+should not be longer than 128~KiB in order to fit to the buffer. If a packet is longer than this, it
+gets truncated to fit in and the rest of its data is dropped.
+
+After receiving a packet's length, the \verb|Operation control| checks if the amount of data that
+are going to be written to the NVMe on the specified \ac{LBA} does not cross a Namespace boundary.
+When this check passes the component submits an NVMe Write command in the same way as the previously
+described submission of the read command, i.e. by writing the command to the Submission queue and
+then updating the \ac{SQTDBL} in the \verb|Doorbell updater|. The NVMe controller reads that command
+from the Submission queue whose data are then returned on the \ac{CC} interface. Upon execution of
+this command, the controller sends multiple read requests to the read buffer that are routed from
+the CQ interface through the \verb|CQ Metadata Extractor| to the header FIFO. These requests can
+request data chunks as large as the current \ac{MRRS} setting (up to 4~KiB) but the
+\verb|PCIe Read Responder| slices each of these requests into 128~B chunks as previously described.
+
+The completion of a command happens in the same was as in case of the read command where the NVMe
+controller writes a \ac{CQE} into the Completion queue which is then detected by the
+\verb|CQE Processor| and its status returned to the \verb|Operation control|\footnotemark. The status is also
+signalized to on the \verb|Operation status| interface with the same status codes as described
+in~\cref{tab:op_stat_codes}.
+
+\footnotetext{The flushing operation after a write has not been implemented because this thesis only
+demonstrates the concept of the shared access between a CPU and an FPGA accelerator without focusing
+on data race. However, the operation can be easily implemented by extending SQE format generation in
+SQ Cmd Dispatcher component and by extending the state machine in the Operation control component.}
+
+\chapter{Filesystem integration}
+
+The NVMe userspace driver provided within the SPDK framework with its API disposes of all necessary
+functions for the NVMe device configuration and status management\footnotemark. The API also
+provides functions, like ccc and mmm that can submit read/write NVMe commands and operate on the raw
+data stored on the \ac{NVM}. However, operation on the raw sectors of \acp{LBA} cannot be easily
+used in any OS. This thesis aims to share a running (but also standardized) filesystem on the NVMe
+drive between a host and an FPGA accelerator. The \emph{exFAT} filesystem has been chosen because of
+its ease of implementation, the ability of storing very large files and the support of very large
+storages. This filesystem is also supported by Linux-based OS by common tools, like \verb|mkfs|,
+\verb|dumpfs| or \verb|lsblk|.
+
+\footnotetext{The driver does not use interrupts since these cannot be routed to the userspace and,
+in spite of that, they have been disabled for the NVMe drive and for the FPGA accelerator as well.
+The NVMe standard supports wide range of interrupt types used in the PCIe. These interrupts can be
+used to notify the requester that new entries arrived to the completion queue. The SPDK framework
+incorporates polling to wait for devices which helps to reduce latency for the cost of putting some
+load to the CPU running polling loops.}
+
+\chapter{Evaluation}
+
+% TODO: Describe testing using iuventus_test.py script and enabling the ublk device
 % TODO : Latency
 % TODO : Resource consumption (DMA Iuventus alone and the whole design with PCI Express IP)

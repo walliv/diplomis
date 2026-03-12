@@ -3,6 +3,131 @@
 The framework can be downloaded from the fork of its GitHub repository (cite this) and switching
 to branch XXX.
 
+\chapter{DMA Iuventus register map}
+\label{chap:iuventus_reg_map}
+
+The complete list of registers that are initalized in the \emph{Software manager} component is
+listed out in \cref{tab:iuventus_reg_map}.
+
+\begin{itemize}
+    \item Each register holds 32~bits, thus, when more bits are required, more registers are used to
+    hold bigger values (denoted with either \verb|L| and \verb|H| in the Name column when only two
+    registers are required or with indexes when more than 2 registers are used).
+    \item The register are of two types, namely the standard ones holding status information
+    or used for configuration (marked as \verb|REG| in the table); and counters that hold sampled
+    values of statistical counters (marked as \verb|CNTR| in the Type column).
+    \item The \verb|SW perm.| column shows which read/write permissions to the specific register
+    does the configuration software has.
+    \item The \verb|HW perm.| column shows which read/write permissions to the specific register
+    does the DMA Iuventus module has.
+    \item Some registers have a software Read permission marked as \emph{Strobe} which marks
+    registers that need to be sampled before the current value can be read from them. This is done
+    by writing bit 1 in the \emph{Control} register. This sampling is necessary because signals
+    that span over multiple registers can change their value between two subsequent register reads
+    and thus return inaccurate information.
+\end{itemize}
+
+\begin{landscape}
+\begin{longtable}{|c|p{1.1cm}|p{1.1cm}|c|p{5.1cm}|p{1.4cm}|p{1.3cm}|p{1.3cm}|p{6cm}|}
+\caption{The complete list of registers of the DMA Iuventus module\label{tab:iuventus_reg_map}}\\
+\hline
+\textbf{Index} & \textbf{Addr (dec)} & \textbf{Addr (hex)} & \textbf{Type} & \textbf{Name} & \textbf{SW perm.} & \textbf{HW perm.} & \textbf{Width [bits]} & \textbf{Notes} \\ \hline
+\endfirsthead
+\hline
+\textbf{Index} & \textbf{Addr (dec)} & \textbf{Addr (hex)} & \textbf{Type} & \textbf{Name} & \textbf{SW perm.} & \textbf{HW perm.} & \textbf{Width [bits]} & \textbf{Notes} \\ \hline
+\endhead
+\hline \multicolumn{9}{|r|}{Continued on next page} \\ \hline
+\endfoot
+\hline
+\endlastfoot
+0 & 0 & 0 & REG & Control & RW & R & 9 & 0: Design enable\newline 1: Sample counters\newline 2: Clear error mask\newline 3: Counters reset\newline 4: Enable update repeat \\ \hline
+1 & 4 & 4 & REG & Status & R & W & 3 & 0: Design ready\newline 1: RST Done\newline 2: Tag Initialization Done \\ \hline
+2 & 8 & 8 & REG & SQTDBL & R & W & 16 &  \\ \hline
+3 & 12 & C & REG & SQHDBL & R & W & 16 &  \\ \hline
+4 & 16 & 10 & REG & CQHDBL & R & W & 16 &  \\ \hline
+5 & 20 & 14 & REG & DBL Mask & RW & R & 16 & Mask for all DBL registers, determines size of queues \\ \hline
+6 & 24 & 18 & REG & SQTDBL Base Addr L & RW & R & 32 & Base address in NVMe BAR containing SQTDBL register for the FPGA queue pair \\ \hline
+7 & 28 & 1C & REG & SQTDBL Base Addr H & RW & R & 32 &  \\ \hline
+8 & 32 & 20 & REG & CQHDBL Base Addr L & RW & R & 32 & Base address in NVMe BAR containing CQHDBL register for the FPGA queue pair \\ \hline
+9 & 36 & 24 & REG & CQHDBL Base Addr H & RW & R & 32 &  \\ \hline
+10 & 40 & 28 & REG & RD Buff Base Addr L & RW & R & 32 & FPGA BAR Address containing the Read Buffer (to properly assign PRP Entries in the SQEs) \\ \hline
+11 & 44 & 2C & REG & RD Buff Base Addr H & RW & R & 32 &  \\ \hline
+12 & 48 & 30 & REG & RD Buff PRP List Base L & RW & R & 32 & The physical address to the host memory of a generated PRP list for read buffer \\ \hline
+13 & 52 & 34 & REG & RD Buff PRP List Base H & RW & R & 32 &  \\ \hline
+14 & 56 & 38 & REG & WR Buff Base Addr L & RW & R & 32 & FPGA BAR Address containing the Write Buffer (to properly assign PRP Entries in the SQEs) \\ \hline
+15 & 60 & 3C & REG & WR Buff Base Addr H & RW & R & 32 &  \\ \hline
+16 & 64 & 40 & REG & WR Buff PRP List Base L & RW & R & 32 & The physical address to the host memory of a generated PRP list for write buffer \\ \hline
+17 & 68 & 44 & REG & WR Buff PRP List Base H & RW & R & 32 &  \\ \hline
+18 & 72 & 48 & REG & Last CQ Entry 0 & R (Strobe) & W & 32 & Last CQ Entry read from the Completion Queue \\ \hline
+19 & 76 & 4C & REG & Last CQ Entry 1 & R (Strobe) & W & 32 &  \\ \hline
+20 & 80 & 50 & REG & Last CQ Entry 2 & R (Strobe) & W & 32 &  \\ \hline
+21 & 84 & 54 & REG & Last CQ Entry 3 & R (Strobe) & W & 32 &  \\ \hline
+22 & 88 & 58 & CNTR & SQEs Dispatched L & R (Strobe) & W & 32 & The amount of dispatched SQEs \\ \hline
+23 & 92 & 5C & CNTR & SQEs Dispatched H & R (Strobe) & W & 32 &  \\ \hline
+24 & 96 & 60 & CNTR & CQEs Processed L & R (Strobe) & W & 32 & The amount of processed CQEs \\ \hline
+25 & 100 & 64 & CNTR & CQEs Processed H & R (Strobe) & W & 32 &  \\ \hline
+26 & 104 & 68 & CNTR & PCIe Reads L & R (Strobe) & W & 32 & The amount of arrived PCIe reads \\ \hline
+27 & 108 & 6C & CNTR & PCIe Reads H & R (Strobe) & W & 32 &  \\ \hline
+28 & 112 & 70 & CNTR & PCIe Read Bytes L & R (Strobe) & W & 32 & The amount of bytes requested in arrived PCIe reads \\ \hline
+29 & 116 & 74 & CNTR & PCIe Read Bytes H & R (Strobe) & W & 32 &  \\ \hline
+30 & 120 & 78 & CNTR & PCIe Writes L & R (Strobe) & W & 32 & The amount of arrived PCIe writes \\ \hline
+31 & 124 & 7C & CNTR & PCIe Writes H & R (Strobe) & W & 32 &  \\ \hline
+32 & 128 & 80 & CNTR & PCIe Write Bytes L & R (Strobe) & W & 32 & The amount of bytes received in arrived PCIe writes \\ \hline
+33 & 132 & 84 & CNTR & PCIe Write Bytes H & R (Strobe) & W & 32 &  \\ \hline
+34 & 136 & 88 & CNTR & SQ PCIe Reads L & R (Strobe) & W & 32 & The amount of PCIe reads from the SQ \\ \hline
+35 & 140 & 8C & CNTR & SQ PCIe Reads H & R (Strobe) & W & 32 &  \\ \hline
+36 & 144 & 90 & CNTR & SQ PCIe Read Bytes L & R (Strobe) & W & 32 & The amount of bytes requested in PCIe reads from the SQ \\ \hline
+37 & 148 & 94 & CNTR & SQ PCIe Read Bytes H & R (Strobe) & W & 32 &  \\ \hline
+38 & 152 & 98 & REG & LBA Num Mask & RW & R & 16 & Determines the maximum amount of LBAs that can be read/written by one command \\ \hline
+39 & 156 & 9C & CNTR & Successful Completions L & R (Strobe) & W & 32 & The amount of successful completions \\ \hline
+40 & 160 & A0 & CNTR & Successful Completions H & R (Strobe) & W & 32 &  \\ \hline
+41 & 164 & A4 & CNTR & Unsuccessful Completions L & R (Strobe) & W & 32 & The amount of unsuccessful completions \\ \hline
+42 & 168 & A8 & CNTR & Unsuccessful Completions H & R (Strobe) & W & 32 &  \\ \hline
+43 & 172 & AC & REG & Completion Error Mask L & R & W & 32 & Bit mask of captured completion errors based on the error set in the specification v1.2b \\ \hline
+44 & 176 & B0 & REG & Completion Error Mask H & R & W & 32 &  \\ \hline
+45 & 180 & B4 & CNTR & RD Buff PCIe Reads L & R (Strobe) & W & 32 & The amount of PCIe reads from the Read buffer \\ \hline
+46 & 184 & B8 & CNTR & RD Buff PCIe Reads H & R (Strobe) & W & 32 &  \\ \hline
+47 & 188 & BC & CNTR & RD Buff PCIe Read Bytes L & R (Strobe) & W & 32 & The amount of bytes requested in PCIe reads from the Read Buffer \\ \hline
+48 & 192 & C0 & CNTR & RD Buff PCIe Read Bytes H & R (Strobe) & W & 32 &  \\ \hline
+49 & 196 & C4 & CNTR & WR Buff PCIe Writes L & R (Strobe) & W & 32 & The amount of PCIe writes to the Write Buffer \\ \hline
+50 & 200 & C8 & CNTR & WR Buff PCIe Writes H & R (Strobe) & W & 32 &  \\ \hline
+51 & 204 & CC & CNTR & WR Buff PCIe Wr Bytes L & R (Strobe) & W & 32 & The amount of bytes received in PCIe writes to the Write Buffer \\ \hline
+52 & 208 & D0 & CNTR & WR Buff PCIe Wr Bytes H & R (Strobe) & W & 32 &  \\ \hline
+53 & 212 & D4 & REG & LBA Space Size L & RW & R & 32 & Size of the NVMe drive in LBAs \\ \hline
+54 & 216 & D8 & REG & LBA Space Size H & RW & R & 32 &  \\ \hline
+55 & 220 & DC & CNTR & CQ PCIe Writes L & R (Strobe) & W & 32 & The amount of PCIe writes to the Completion Queue \\ \hline
+56 & 224 & E0 & CNTR & CQ PCIe Writes H & R (Strobe) & W & 32 &  \\ \hline
+57 & 228 & E4 & CNTR & CQ PCIe Write Bytes L & R (Strobe) & W & 32 & The amount of bytes received in PCIe writes to the Completion Queue \\ \hline
+58 & 232 & E8 & CNTR & CQ PCIe Write Bytes H & R (Strobe) & W & 32 &  \\ \hline
+59 & 236 & EC & CNTR & CQHDBL regular upds L & R (Strobe) & W & 32 & The amount of regular CQHDBL updates (i.e. updates dispatched as a consequence of a freshly processed CQE) \\ \hline
+60 & 240 & F0 & CNTR & CQHDBL regular upds H & R (Strobe) & W & 32 &  \\ \hline
+61 & 244 & F4 & CNTR & CQHDBL repeated upds L & R (Strobe) & W & 32 & The amount of repeated CQHDBL updates (i.e. updates repeated in order to ensure the most current value in the NVMe registers) \\ \hline
+62 & 248 & F8 & CNTR & CQHDBL repeated upds H & R (Strobe) & W & 32 &  \\ \hline
+63 & 252 & FC & CNTR & SQTDBL regular upds L & R (Strobe) & W & 32 & The amount of regular SQTDBL updates (i.e. updates dispatched as a consequence of a freshly dispatched SQE) \\ \hline
+64 & 256 & 100 & CNTR & SQTDBL regular upds H & R (Strobe) & W & 32 &  \\ \hline
+65 & 260 & 104 & CNTR & SQTDBL repeated upds L & R (Strobe) & W & 32 & The amount of repeated SQTDBL updates (i.e. updates repeated in order to ensure the most current value in the NVMe registers) \\ \hline
+66 & 264 & 108 & CNTR & SQTDBL repeated upds H & R (Strobe) & W & 32 &  \\ \hline
+67 & 268 & 10C & REG & Metadata pointer L & RW & R & 32 & (unused) Pointer to metadata region (for metadata field in SQE, assigned to some dummy address in the host memory) \\ \hline
+68 & 272 & 110 & REG & Metadata pointer H & RW & R & 32 & (unused) \\ \hline
+69 & 276 & 114 & CNTR & NVME RD Cmd Bytes L & R (Strobe) & W & 32 & The amount of bytes requested in NVMe read commands \\ \hline
+70 & 280 & 118 & CNTR & NVME RD Cmd Bytes H & R (Strobe) & W & 32 &  \\ \hline
+71 & 284 & 11C & CNTR & NVME WR Cmd Bytes L & R (Strobe) & W & 32 & The amount of bytes requested in NVMe write commands \\ \hline
+72 & 288 & 120 & CNTR & NVME WR Cmd Bytes H & R (Strobe) & W & 32 &  \\ \hline
+73 & 292 & 124 & CNTR & WR Buff Usr Reads L & R (Strobe) & W & 32 & The amount of read packets from the write buffer \\ \hline
+74 & 296 & 128 & CNTR & WR Buff Usr Reads H & R (Strobe) & W & 32 &  \\ \hline
+75 & 300 & 12C & CNTR & WR Buff Usr Read Bytes L & R (Strobe) & W & 32 & The amount of read bytes from the write buffer \\ \hline
+76 & 304 & 130 & CNTR & WR Buff Usr Read Bytes H & R (Strobe) & W & 32 &  \\ \hline
+77 & 308 & 134 & CNTR & RD Buff Disp Reads L & R (Strobe) & W & 32 & The amount of read packets from the read buffer \\ \hline
+78 & 312 & 138 & CNTR & RD Buff Disp Reads H & R (Strobe) & W & 32 &  \\ \hline
+79 & 316 & 13C & CNTR & RD Buff Disp Read Bytes L & R (Strobe) & W & 32 & The amount of read bytes from the read buffer \\ \hline
+80 & 320 & 140 & CNTR & RD Buff Disp Read Bytes H & R (Strobe) & W & 32 &  \\ \hline
+81 & 324 & 144 & CNTR & SQ Disp Reads L & R (Strobe) & W & 32 & The amount of read packets from the submission queue \\ \hline
+82 & 328 & 148 & CNTR & SQ Disp Reads H & R (Strobe) & W & 32 &  \\ \hline
+83 & 332 & 14C & CNTR & SQ Disp Read Bytes L & R (Strobe) & W & 32 & The amount of read bytes from the submission queue \\ \hline
+84 & 336 & 150 & CNTR & SQ Disp Read Bytes H & R (Strobe) & W & 32 &  \\ \hline
+85 & 340 & 154 & REG & Tag FIFO Status & R & W & 12 & The amount of free tags in the FIFO \\ \hline
+\end{longtable}
+\end{landscape}
 
 % \section{Quantities and Units}
 
