@@ -23,8 +23,8 @@ devices and more throughput were required. These include:
 % TODO: Add picture of PCI topology with some functions and one PCI-to-PCI bridge.
 
 The PCI protocol did not keep pace with increasing demand of computer peripheral communication
-structures and needed to be changed. The PCI Express protocol significantly changed the strategy for
-both the communication topology and the physical properties of the interconnect\cite{pcie_book}.
+structures and needed to be replaced. The PCI Express protocol significantly changed the strategy
+for both the communication topology and the physical properties of the interconnect\cite{pcie_book}.
 
 \section{Communication model}
 
@@ -42,7 +42,7 @@ Switches, the number of devices can be increased arbitrarily, making PCIe a swit
 network\cite{pcie_spec}. Although the PCIe specification introduces many advanced features, this
 thesis presents mostly the necessary ones for its purposes.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.2]{pict/host_topology-raw_topology}
     \caption[Example of PCIe topology]{Example of a topology using PCIe interconnect with its
@@ -51,35 +51,34 @@ thesis presents mostly the necessary ones for its purposes.
 \end{figure}
 
 \footnotetext{
-    The PCIe specification (with concordance to the PCI) defines three \emph{System elements} to
-    identify its devices, namely \emph{Bus}, \emph{Device} and \emph{Function}. Every point-to-point
-    connection in the topology makes a separate Bus together with internal (virtual) buses of the
-    Switches and the Root Complex. The Device identifier stays as a remnant of the PCI standard and
-    every Bus within the PCIe topology contains only one. Within each Device, one or multiple Functions
-    can be present. The Function is basically and addressable entity in the configuration space where
-    \emph{Endpoint} is the most important type of a Function. Using the term `device' in this thesis
-    will refer to a general device in the PCIe topology that can contain one or multiple Functions
-    (or Endpoints).
+    The PCIe specification defines three \emph{System elements} to identify its devices, namely
+    \emph{Bus}, \emph{Device} and \emph{Function}. Every point-to-point connection in the topology
+    makes a separate Bus plus internal (virtual) buses of the Switches and the Root Complex. The
+    Device identifier stays as a remnant of the PCI standard and every Bus within the PCIe topology
+    contains only one. Within each Device, one or multiple Functions can be present. The Function is
+    basically and addressable entity in the configuration space where \emph{Endpoint} is the most
+    important type of a Function. Using the term `device' in this thesis will refer to a general
+    device in the PCIe topology that can contain one or multiple Functions (or Endpoints).
 }
 
 % NOTE: Maybe mention BDF identifier if necessary
 
 Devices communicate using units called \acp{TLP}, forming a packetized transfer. Each \ac{TLP}
 contains a PCIe header used for identification followed by an optional payload. There are many
-\ac{TLP} types, but the ones mentioned in this work are \ac{MRd} and \ac{MWr}. Requests may require
-a response (called \emph{non-posted}, as with \acp{MRd}) in the form of \ac{Cpl} presenting a third
+\ac{TLP} types, but the ones used in this work are \ac{MRd} and \ac{MWr}. Requests may require
+a response in the form of \ac{Cpl} presenting a third utilized
 \ac{TLP} type. Such requests are called \emph{non-posted} (like \acp{MRd}) while requests that do
 not require a response are called \emph{posted} (like \acp{MWr}). The device creating a request is
 called \emph{Requester}, while the device `completing' the request (sending a response or just
 accepting the payload) is called \emph{Completer}.
 
-The \ac{rcpx} is located on the CPU die and tightly integrated with the processing cores to provide
-fast access to the system's I/O devices. The \ac{rcpx} also provides the connection to host memory,
-which is the primary communication path used by DMA engines for \ac{H2D} and \ac{D2H} transfers.
-Multiple Root Ports or Downstream ports enable direct \ac{D2D} communication, as shown
+\ac{rcpx} is located on the CPU die and tightly integrated with the processing cores to provide
+fast access to the system's I/O devices. \ac{rcpx} also provides the connection to host memory,
+which is the primary communication target used by DMA engines for \ac{H2D} and \ac{D2H} transfers.
+Additionally, multiple Root Ports or Downstream ports enable direct \ac{D2D} communication, as shown
 in~\cref{fig:pcie_transfers}.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.2]{pict/host_topology-d2d_write}
     \caption[Examples of PCIe transports]{Examples of the transports occurring in the PCIe domain.
@@ -95,23 +94,23 @@ in~\cref{fig:pcie_transfers}.
 The PCIe specification gets published in versions called \emph{generations}. With every new
 specification, the throughput of the bus gets doubled while keeping backward and forward
 compatibility between its standards (this is an important feature of PCIe). This is the reason, why
-the physical implementation of the protocol stack remains so complicated, especially on the physical
+the implementation of the protocol stack remains so complicated, especially on the physical
 layer. The physical connection between two ports consists of multiple differential pairs called
 \emph{lanes} that are bundled together into a \emph{link}. Each lane allows for full-duplex
 communication, where each direction is communicated using a separate differential pair. The link can
 either contain 1, 2, 4, 8 or 16 lanes. The communication speeds are shown
-in~\cref{tab:res_consumption}.
+in~\cref{tab:pcie_link_speeds}.
 
 \begin{table}[t]
     \centering
     \caption[PCIe throughput based on its versions]{PCIe throughput based on its versions. The
-    throughput is calculated without the overhead of the Physical layer}
-    \label{tab:res_consumption}
+    throughput is calculated without the overhead of the Physical layer\cite{pcie_wiki}}
+    \label{tab:pcie_link_speeds}
     \begin{tabular}{cccccccc}
     \toprule
-    \multirow{2}{*}{Version} & \multicolumn{2}{c}{Line code} & \multicolumn{5}{c}{Link throughput [GBps]} \\
+    \multirow{2}{*}{\textbf{Version}} & \multicolumn{2}{c}{\textbf{Line code}} & \multicolumn{5}{c}{\textbf{Link throughput [GBps]}} \\
     \cmidrule(lr){2-3} \cmidrule(lr){4-8}
-               & Electrical & Logical    & x1      & x2     & x4     & x8     & x16    \\
+               & \textbf{Electrical} & \textbf{Logical} & \textbf{x1} & \textbf{x2} & \textbf{x4} & \textbf{x8} & \textbf{x16} \\
     \midrule
     Gen3       & NRZ        & 128b/130b  & 0.985   & 1.969  & 3.938  & 7.877  & 15.754 \\
     Gen4       & NRZ        & 128b/130b  & 1.969   & 3.938  & 7.877  & 15.754 & 31.508 \\
@@ -122,16 +121,16 @@ in~\cref{tab:res_consumption}.
     \end{tabular}
 \end{table}
 
-As for the physical attachment interface, this thesis works with two of them, namely \ac{CEM} and
-\emph{M.2}. The \ac{CEM} standard is the oldest one used for \emph{Add-in Cards} with GPU chips,
-FPGA accelerators or \acp{NIC}. It supports from 1 to 16 lanes with with wider link widths
-supporting lower ones and vice versa (these however with specially carved connectors that fit longer
-connector of the attached card). This form-factor allows for connection of the most power consuming
-peripherals where the connector can supply up to 75~W. The accelerators can require additional power
-by introducing external power supply attachments. The most common ATX connector adds another 75~W
-for its 6-pin configuration or 150~W for the 8-pin configuration\cite{atx_spec}.
+As for the physical attachment, this thesis works with two of them, namely \ac{CEM} and \emph{M.2}.
+The \ac{CEM} standard is the oldest one used for \emph{Add-in Cards} with GPU chips, FPGA
+accelerators or \acp{NIC}. It supports from 1 to 16 lanes where wider link widths supporting lower
+lane counts and vice versa (these however with specially carved connectors that fit longer connector
+of the attached card). This form-factor allows for connection of the most power consuming
+peripherals where the connector can supply up to 75~W\cite{pcie_forms}. The accelerators can require
+additional power by introducing external power supply attachments. The most common ATX connector
+adds another 75~W in the 6-pin or 150~W in the 8-pin configuration\cite{atx_spec}.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=0.4]{pict/cem_conns}
     \caption[Various types of PCIe CEM connectors]{Different types of CEM PCIe connectors supporting
@@ -144,20 +143,20 @@ The second type of physical attachment, \emph{M.2}, is designed for ultra-light,
 efficient platforms such as wireless modules or (as in the case of this thesis) \ac{NVMe} drives.
 This connector has a fixed set of 4 lanes and a variable module length ranging from 30~mm to 110~mm.
 These connectors present a detachable form factor for PCIe links but the standard allows for
-permanently attached devices to be connected as well.
+permanently attached devices to be connected as well\cite{pcie_forms}.
 
 As it is obvious from the variety of link configurations in terms of speeds and the amount of lanes,
 the multitude of PCIe devices inside a compute node needs to agree on common parameters in order to
 facilitate data transfer. This process of negotiation is called \emph{link training} and it takes
-place after the network get powered up. The training is done on per-link-basis so there are multiple
+place after the network gets powered up. The training is done on per-link-basis so there are multiple
 differently configured links in the system at a given point in time. This is presented
-on~\cref{fig:pcie_diff_link_widths} where the M.2 SSD needs to communicate with the processor
-(where Root Ports can usually utilize up to 16 lanes) or with a \ac{NIC} which supports up to 16
-lanes. Other than link's lane count and transfer rate, other configured parameters include lane
-polarity and lane reversal. Since the training and the negotiated link parameters are tha matter of
-the physical layer, the link properties remain transparent for the user.
+on~\cref{fig:pcie_diff_link_widths} where the M.2 SSD needs to communicate with the processor (where
+Root Ports can usually utilize up to 16 lanes) or with a \ac{NIC} which supports up to 16 lanes.
+Other than link width and data rate, more parameters are configured such as lane polarity, lane
+reversal or lane-to-lane deskew. The process of link training happens only in hardware and is
+transparent for the user\cite{pcie_book}.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.4]{pict/host_topology-diff_link_widths}
     \caption[PCIe topology with different link widths]{Topology with multiple interconnected devices
@@ -170,11 +169,11 @@ the physical layer, the link properties remain transparent for the user.
 After the initial link training is done and every link is active, the host system does device
 discovery and configuration upon system boot in order to map the network. The process of discovery
 is called \emph{enumeration} and involves a CPU communicating through the Root Complex in order to find
-every connected device in the topology and assign its BDF identifier (this includes assigning
+every connected device in the topology and assign its \ac{BDF} identifier (this includes assigning
 numbers also to buses between ports that do not necessarily connect to an Endpoint, like two
 Switches or a Switch with the Root Complex). The search is done in a depth-first way where each
 device is registered if it responds with a valid \emph{Vendor ID} that is located within device's
-configuration registers. After assigning all BDFs in the topology, the configuration software
+configuration registers. After assigning all \acp{BDF} in the topology, the configuration software
 further configures registers on the discovered devices. The configuration is done solely by the Root
 Complex in order to avoid the complexity of management when multiple devices (e.g. Endpoints) would
 try to configure each other. The initial assigning of configuration attributes is done using an
@@ -182,22 +181,22 @@ IO-based transfer but further setting is done using \ac{MMIO}.
 
 Each Endpoint contains configuration registers in a 64-byte \emph{PCI Configuration Header}, which
 holds the most important attributes controlling the Function's ability to initiate transactions over
-PCIe and to be addressable within a host system. Firstly, since devices cannot generate Requests on
-their own by default, the \emph{Bus Master} attribute enables this feature. Secondly, in order for
-adjacent devices to locate the current Function and to access its internal, user-defined
-registers/memory space, at least one of the \acp{BAR} must be initialized.  By using BARs, each
-Endpoint requests a memory space within a host system for MMIO access. This is needed to access the
-application logic from the outside since each Endpoint accepts only those transactions whose
-addresses are in the ranges specified by its BARs. Each Function can register up to six 32-bit BARs
-which provides memory segmentation needed by some host applications. When 64-bit addressing is
-requested, two consecutive BARs are used. Throughout this work, the observation has been made that
-most devices allocate one to two BARs and, when not exceeding 4 GiB of space, an operating system
-maps them to 32-bit address ranges even when 64-bit addressing has been requested. First of all,
-this addressing has to be enabled in the UEFI settings of the host system.
+PCIe and to be addressable within a host system. Firstly, since devices cannot generate Requests by
+default, the \emph{Bus Master} attribute is enabled. Secondly, in order for adjacent devices to
+locate the current Function and to access its internal, user-defined memory space, at least one of
+the \acp{BAR} must be initialized.  By using BARs, each Endpoint requests a memory space within a
+host system for \ac{MMIO} access. In case of the attached FPGA accelerator, this is needed to access
+the internal application logic from the outside since each Endpoint accepts only those memory
+transactions whose addresses target the specified BARs. Each Function can register up to six 32-bit
+BARs which provide memory segmentation needed by some host applications. When 64-bit addressing is
+requested, two consecutive BARs are used\cite{pcie_book}. Throughout this work, the observation has
+been made that most devices allocate one to two BARs and, when not exceeding 4 GiB of space, an
+operating system maps them to 32-bit address ranges even when 64-bit addressing has been requested.
+First of all, this addressing has to be enabled in the UEFI settings of the host system.
 
-Besides than the sheer capability for devices to be localizable in the system, other parameters are
-configured and need to be abided by by the user applications (e.g.\ the user-defined FPGA logic). A
-function defines its supported \ac{MPS} in the \emph{Device Capabilities register}. Seeing this
+Besides the sheer capability for devices to be localizable in the system, other parameters are
+configured and need to be abided by by user applications (e.g.\ the user-defined FPGA logic). A
+Function defines its supported \ac{MPS} in the \emph{Device Capabilities register}. Seeing this
 value, the configuration software sets its preferred value in a field in the \emph{Device Control
 register}. The value of this field prohibits the Transmitter to dispatch TLP with greater payload
 than MPS specified and the Receiver to process them. The configuration allows further adjustment
@@ -205,41 +204,44 @@ using the \ac{MRRS} in the \emph{Device Control register} which prohibits the Tr
 dispatch a Read Request greater than the specified size. Available values for these two parameters
 range from 128 to 4096~bytes (in powers of two steps). The configuration software balances these
 parameters based on latency/bandwidth requirements in the network. The configuration has to take
-account of the pairs of adjacent devices communicating with each other since receiving a TLP on a
-function's port whose size is larger than its set MPS results in the function rejecting this packet
-and reporting a fatal error\footnotemark.
+account of the pairs of adjacent devices communicating with each other since receiving a TLP whose
+size is larger than the set MPS on a port results in the function rejecting this packet and
+reporting a fatal error\footnotemark.
+
+% TODO: Explain the configuration space in a small footnote
 
 \footnotetext{The PCIe standard does not require System Elements to perform segmentation of large
-    TLPs.}
+    TLPs\cite{pcie_spec}.}
 
 \section{Peer-to-peer transfer}
 
-An important aspect of PCIe (with its predecessor as well) and the structure of its network allowed
-to introduce \ac{DMA} that allows to copy large amounts of data without the host CPU facilitating
-such copying. The usual approach it the exchange of data between PCIe devices and the host CPU
-through buffers in the host memory. However, the network infrastructure to address other devices in
-the topology as well. This type of \ac{D2D} transport is called \ac{P2P} or \emph{Host Bypassing}
-and makes a fundamental part of this thesis. There are several implications of running such
-transport in the host system. The specification makes the support for each Switch mandatory (for
-transport between its Downstream ports) but optional for the Root Complex (for transport between its
-Root Ports) (source to spec). The routing of TLP differs based on its type with \acp{MWr} and
-\acp{MRd} being routed by memory address while \acs{Cpl} being routed by Requester's BDF identifier.
+An important aspect of PCIe (with its predecessor as well) allowed to introduce \ac{DMA} transfers
+that allows to copy large amounts of data without the host CPU facilitating such copying. The usual
+approach is the exchange of data between PCIe devices and the host CPU through buffers in the host
+memory. However, the network infrastructure allows to address other devices in the topology as well.
+This type of \ac{D2D} transport is called \ac{P2P} or \emph{Host Bypassing} and makes a fundamental
+part of this thesis. There are several implications of running such transport in the host system.
+The specification makes the P2P support for each Switch mandatory (for transport between its
+Downstream ports) but optional for the Root Complex (for transport between its Root Ports) though.
+The routing of TLP differs based on its type with \acp{MWr} and \acp{MRd} being routed by memory
+address while \acs{Cpl} being routed by Requester's BDF identifier\cite{pcie_spec}.
 
 Today's host CPUs utilize \ac{IOMMU} to translate physical address to virtual ones in order to
-securely split I/O peripherals into groups. This unit is crucial in multi-tenant environments (like
-guests as virtual machines) where only devices in one group can perform P2P transfers between each
-other. Otherwise, where communication between two groups is required, the data need to be analyzed
-by the CPU. Without IOMMU a potentially malicious device can write and read from every region in the
-host system. The unit works hand in hand with the PCIe's \ac{ACS} which forces every traffic to pass
-through the \ac{rcpx} even if the devices are connected to the single Switch (this is shown
-in~\cref{fig:pcie_acr}).  Otherwise, all devices under each Root Port are put to a common IOMMU
-group which does not play well with the need to decide isolation on per-device basis.
+securely split I/O peripherals into groups\cite{iommu}. This unit is crucial in multi-tenant
+environments (like guests as virtual machines) where only devices in one group can perform P2P
+transfers between each other. Otherwise, where communication between two groups is required, the
+data need to be analyzed by the CPU. Without IOMMU a potentially malicious device can write and read
+from every region in the host system. The unit works hand in hand with the PCIe's \ac{ACS} which
+forces every traffic to pass through the \ac{rcpx} even if the devices are connected to the single
+Switch (this is shown in~\cref{fig:pcie_acs}).  Otherwise, all devices under each Root Port are put
+to a common IOMMU group which does not play well with the need to decide isolation on per-device
+basis\cite{pcie_acs}.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.3]{pict/host_topology-acr_influence}
     \caption{Influence of the ACS mechanism}
-    \label{fig:pcie_acr}
+    \label{fig:pcie_acs}
 \end{figure}
 
 Considering the test server used in this work, the support for P2P transfers has been discovered as
@@ -250,25 +252,25 @@ communicate using physical addresses.
 
 \chapter{Integrated core for PCIe on FPGAs}
 
-Modern FPGAs provide hardened IP core that implements the whole PCIe protocol stack (generally
-implementing a Port) that can be configured either as a Root Port (not as a \ac{rcpx} though) or an
-Upstream Port (mostly for Endpoint, sometimes for Switch on some devices). The IP utilizes
-high-speed serial transceivers located on the edge of the chip that connect directly to the
-CEM-compliant Edge connector on the PCB's side. This work utilizes the \emph{Alveo U55C} data-center
-acceleration card which is equipped with \verb+xcu55c-fsvh2892-2L-e+ chip (this corresponds to the
-serial chip \verb+vu57p+)\cite{alveo_u55c}. The available integrated core called \emph{PCIE4C}
-allows to configure the interface to run on Gen3 transfer rat on 16 lanes (Gen3x16) or Gen4 transfer
-rate on 8 lanes (Gen4x8) providing the same throughput but reducing logic utilization. Since two of
-these cores are provided close to each other and a total of 16 lanes is provided, these cores can
-split the available lanes and the acceleration card can be configured to run in a \emph{PCIe
-bifurcation} mode. This mode utilizes a single PCIe link running two physically separated devices
-(each containing its own set of Functions). Therefore, the acceleration card can reach a cumulative
-data transfer rate of PCIe Gen4x16.
+Modern FPGAs provide hardened IP cores that implement the whole PCIe protocol stack that can be
+configured either as a Root Port (not as a \ac{rcpx} though) or an Upstream Port (mostly for
+Endpoint, sometimes for Switch on some devices). The IP utilizes high-speed serial transceivers
+located on the edge of the chip that connect directly to the CEM-compliant Edge connector on the
+PCB's side. This work utilizes the \emph{Alveo U55C} data-center acceleration card which is equipped
+with \verb+xcu55c-fsvh2892-2L-e+ chip (corresponds to the serial chip
+\verb+vu57p+)\cite{alveo_u55c}. The available integrated core called \emph{PCIE4C} allows to
+configure the interface to run on Gen3 transfer rate on 16 lanes (Gen3x16) or Gen4 transfer rate on
+8 lanes (Gen4x8) providing the same throughput but reducing logic utilization. Since two of these
+cores are provided close to each other and a total of 16 lanes is provided, these cores can split
+the available lanes and the acceleration card can be configured to run in a \emph{PCIe bifurcation}
+mode. This mode utilizes a single PCIe link running two physically separated devices (each
+containing its own set of Functions). Therefore, the acceleration card can reach a cumulative data
+transfer rate of PCIe Gen4x16.
 
 \section{Interfaces to user logic}
 
 Since the described core implement the whole PCIe protocol stack (meaning from Physical
-to Transaction layer), the user logic does not have to deal with task of the lower layers, such as
+to Transaction layer), the user logic does not have to deal with the tasks of the lower layers, such as
 transaction buffering, flow control credit management, data integrity check, lane deskew or clock
 recovery. In terms of the PCIe topology, this core implements an Upstream port (specifically as a
 PCIe Endpoint). The core provides four separate interfaces for the user logic where each follows the
@@ -329,7 +331,7 @@ performs a read and write of raw data between memory regions in the host system.
 the NVMe device behaves as a Bus Master and can therefore generate its own \acp{MWr} and \acp{MRd}
 which is suitable for the \ac{P2P} communication in the PCIe domain.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-nvme_design}
     \caption{Elementary block scheme of the NVMe device}
@@ -365,7 +367,7 @@ I/O Completion queue in order to save resources (this is not possible for the Ad
 though since only one can be instantiated).  Each queue pair is identified by its ID where Admin
 queue-pair has a fixed ID of 0 and every other I/O queue pair reserves an ID of a higher index.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-nvme_initialized_system}
     \caption[Initialized system with one NVMe device and a CPU]{Initialized system with an NVMe
@@ -383,14 +385,14 @@ that a consumer reads only valid ones. A queue is considered empty if values of 
 equal, and full if a value of the Tail doorbell is equal the value of the Head doorbell minus one
 modulo a size of the queue as is shown in~\cref{fig:nvme_empty_queue,fig:nvme_full_queue}.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-empty_queue}
     \caption{Two examples of an empty queue}
     \label{fig:nvme_empty_queue}
 \end{figure}
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-full_queue}
     \caption{Two examples of a full queue}
@@ -418,7 +420,7 @@ necessary information for a controller to process a command. There are two sets 
 by the NVMe specification, namely \emph{Admin Command Set} and \emph{NVM Command Set}\footnotemark.
 The mostly used commands in this thesis on runtime are read and write from/to the \ac{NVM}.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-sqe_template}
     \caption[Format of Submission Queue Entry]{Format of Submission Queue Entry. The greyed-out
@@ -471,7 +473,7 @@ value that is considered valid is flipped upon every \ac{CQTDBL} rollover, start
 the initial pass through queue (i.e.\ after queue initialization), then flipping to 0 when the
 pointer rolls back to 0, then to 1 again and so on.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-cqe_template}
     \caption[Format of Completion Queue Entry]{Format of Completion Queue Entry. The greyed-out
@@ -530,7 +532,7 @@ multiple NVMe devices from multiple acceleration cards, thus implementing an M-t
 topology\footnotemark\@ as seen in~\cref{fig:nvme_multipath}. This feature that allows to access one
 NVMe device from multiple masters is sometimes called \emph{multi-pathing}.
 
-\begin{figure}[!h]
+\begin{figure}[!ht]
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-multi_pathing}
     \caption{Example topology with M:N mesh network}
