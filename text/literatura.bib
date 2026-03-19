@@ -12,6 +12,7 @@
 @online{amd_alveo_accels,
     author   = {AMD, Inc.},
     title    = {AMD Alveo Adaptable Accelerator Cards},
+    year     = {2026},
     url      = {https://www.amd.com/en/products/accelerators/alveo.html},
     addendum = {[Online; accessed: 23-October-2025]},
     keywords = {FPGA, ACAP, accelerator, data center}
@@ -22,7 +23,7 @@
     title    = {UltraScale Architecture Libraries User Guide (UG974)},
     subtitle = {ICAPE3},
     version  = {2025.1},
-    date     = {29-May-2025},
+    date     = {2025-05-29},
     url      = {https://docs.amd.com/r/2025.1-English/ug974-vivado-ultrascale-libraries/ICAPE3},
     addendum = {[Online; accessed: 13-March-2026]},
     keywords = {FPGA, ICAP, configuration}
@@ -31,6 +32,7 @@
 @online{amd_ila,
     author   = {AMD Inc.},
     title    = {Integrated Logic Analyzer (ILA)},
+    year     = {2026},
     url      = {https://www.amd.com/de/products/adaptive-socs-and-fpgas/intellectual-property/ila.html},
     addendum = {[Online; accessed: 13-March-2026]},
     keywords = {FPGA, ILA, logic analyzer}
@@ -41,7 +43,7 @@
     title    = {UltraScale Architecture Libraries User Guide (UG974)},
     subtitle = {SYSMONE4},
     version  = {2025.1},
-    date     = {29-May-2025},
+    date     = {2025-05-29},
     url      = {https://docs.amd.com/r/2025.1-English/ug974-vivado-ultrascale-libraries/SYSMONE4},
     addendum = {[Online; accessed: 13-March-2026]},
     keywords = {FPGA, SYSMON}
@@ -57,27 +59,19 @@
     keywords = {ATX, power supply}
 }
 
-@manual{atx_spec,
-    author   = {Intel Corporation},
-    title    = {ATX Version 3.0 Multi Rail Desktop Platform Power Supply},
-    year     = {2022},
-    version  = {2.0},
-    url      = {https://www.cybenetics.com/attachs/52.pdf},
-    addendum = {[Online; accessed: 4-April-2026]},
-    keywords = {ATX, power supply}
-}
-
 @online{axis_spec,
     author   = {ARM Limited},
     title    = {AMBA® AXI-Stream Protocol Specification},
+    year     = {2021},
     url      = {https://developer.arm.com/documentation/ihi0051/latest/},
     addendum = {[Online; accessed: 23-October-2025]},
     keywords = {AMBA, AXI-Stream}
 }
 
 @online{calypte_github,
-    author   = {Vladislav Válek, Martin Špinler, Jakub Cabal},
+    author   = {Vladislav Válek and Martin Špinler and Jakub Cabal},
     title    = {DMA Calypte},
+    year     = {2026},
     url      = {https://cesnet.github.io/ndk-fpga/devel/comp/dma/dma_calypte/readme.html},
     addendum = {[Online; accessed: 23-October-2025]},
     keywords = {PCI Express, DMA engine, NDK-FPGA}
@@ -91,11 +85,11 @@
     keywords = {NVIDIA,NIC, SmartNIC}
 }
 
-@manual{devicetree,
+@online{devicetree,
     author   = {Linaro Limited},
     title    = {Devicetree Specification document source files},
     version  = {0.4},
-    date     = {28-June-2023},
+    date     = {2024-06-28},
     url      = {https://github.com/devicetree-org/devicetree-specification/releases/tag/v0.4},
     addendum = {[Online; accessed: 13-March-2026]},
     keywords = {devicetree, device tree}
@@ -105,18 +99,10 @@
     author   = {Microsoft Inc.},
     title    = {exFAT file system specification},
     version  = {7},
-    date     = {10-July-2025},
+    date     = {2025-07-10},
     url      = {https://learn.microsoft.com/en-us/windows/win32/fileio/exfat-specification},
     addendum = {[Online; accessed: 13-March-2026]},
-    keywords = {exFAT}
-}
-
-@online{intel_burst,
-    author   = {Intel Corporation},
-    title    = {How to Implement a 64B PCIe Burst Transfer on Intel Architecture},
-    url      = {https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/pcie-burst-transfer-paper.pdf},
-    addendum = {[Online; accessed: 23-October-2025]},
-    keywords = {AVX, burst, Intel CPU}
+    keywords = {exFAT, filesystem}
 }
 
 @manual{intel_ptile,
@@ -157,7 +143,7 @@
 
 @book{linux_drivers,
     title     = {Linux Device Drivers, Third Edition},
-    author    = {Jonathan Corbet, Alessandro Rubini, Greg Kroah-Hartman},
+    author    = {Jonathan Corbet and Alessandro Rubini and Greg Kroah-Hartman},
     isbn      = {0-596-00590-3},
     year      = {2005},
     publisher = {O'Reilly Media, Inc.},
@@ -233,16 +219,17 @@
 @manual{nvme_spec,
     author   = {NVM Express Inc.},
     title    = {Non-Volatile Memory Express},
-    date     = {1-June-2016},
+    date     = {2016-06-01},
     version  = {1.2b},
     url      = {https://nvmexpress.org/wp-content/uploads/NVM_Express_1_2b_20160601-1.pdf},
     addendum = {[Online; accessed: 13-March-2026]},
     keywords = {NVMe, NVM Express, storage, PCI Express}
 }
 
-@online{pcie_acs,
+@manual{pcie_acs,
     author   = {Red Hat Virtualization Documentation Team},
     title    = {Hardware Considerations for Implementing SR-IOV},
+    year     = {2018},
     url      = {https://docs.redhat.com/de/documentation/red_hat_virtualization/4.2/html/hardware_considerations_for_implementing_sr-iov/index},
     addendum = {[Online; accessed: 23-October-2025]},
     keywords = {SR-IOV, PCIe, ACS, IOMMU}
@@ -261,7 +248,7 @@
 
 @book{pcie_book,
     title     = {PCI Express Technology},
-    author    = {Mike Jackson, Ravi Budruk},
+    author    = {Mike Jackson and Ravi Budruk},
     isbn      = {978-0-9836465-2-5},
     year      = {2012},
     publisher = {Mindshare, Inc.},
@@ -284,7 +271,7 @@
     keywords = {PCIe, CEM, M.2, U.2}
 }
 
-@reference{pcie_spec,
+@manual{pcie_spec,
     title     = {PCI Express Base Specification},
     edition   = {Revision 4.0, Version 1.0},
     author    = {PCI-SIG},
@@ -327,4 +314,94 @@
     url      = {https://spdk.io/doc/userspace.html},
     addendum = {[Online; accessed: 13-March-2026]},
     keywords = {SPDK, userspace, driver}
+}
+
+@online{spdk_ublk,
+    author   = {SPDK},
+    title    = {ublk Target},
+    url      = {https://spdk.io/doc/ublk.html},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {SPDK, ublk, driver}
+}
+
+@online{nvme_latency,
+    author   = {Allyn Melaventano},
+    title    = {Intel’s Optane DC Persistent Memory DIMMs Push Latency Closer to DRAM},
+    url      = {https://pcper.com/2018/12/intels-optane-dc-persistent-memory-dimms-push-latency-closer-to-dram/},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {latency, NVMe, SSD, HDD, Optane}
+}
+
+@online{ublk_linux_kern_doc,
+    author   = {The kernel development community},
+    title    = {Userspace block device driver (ublk driver)},
+    url      = {https://docs.kernel.org/block/ublk.html},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {userspace, driver, block device, Linux, bdev, ublk}
+}
+
+@online{mkfs_manpage,
+    author   = {Arch manual pages},
+    title    = {mkfs.exfat(8)},
+    url      = {https://man.archlinux.org/man/mkfs.exfat.8},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {Arch, mkfs, filesystem, Linux, exFAT}
+}
+
+@online{io_uring_whitepaper,
+    author   = {Jens Axboe},
+    title    = {Efficient IO with io\_uring},
+    version  = {0.4},
+    date     = {2019-10-15},
+    url      = {https://kernel.dk/io_uring.pdf},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {liburing, io\_uring, Linux, kernel, driver}
+}
+
+@online{ndk_sw_v6_29_0,
+    author   = {CESNET a.l.e.},
+    title    = {ndk-sw},
+    version  = {6.29.0},
+    date     = {2025-12-02},
+    url      = {https://github.com/CESNET/ndk-sw/tree/v6.29.0},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {NDK-SW, NDK-FPGA}
+}
+
+@online{ndk_fpga_iuventus_branch,
+    author   = {CESNET a.l.e.},
+    title    = {ndk-fpga},
+    version  = {valek-feat-dma\_iuventus},
+    date     = {2025-03-19},
+    url      = {https://github.com/walliv/ndk-fpga/tree/valek-feat-dma_iuventus},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {NDK-FPGA, FPGA}
+}
+
+@online{nvc_sim,
+    author   = {Nick Gasson},
+    title    = {nvc},
+    version  = {1.18.2},
+    date     = {2025-11-19},
+    url      = {https://github.com/nickg/nvc/tree/r1.18.2},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {NDK-FPGA, FPGA}
+}
+
+@online{cocotb_homepage,
+    author   = {cocotb},
+    title    = {cocotb | Python verification framework},
+    year     = {2026},
+    url      = {https://www.cocotb.org/},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {cocotb, CocoTB}
+}
+
+@online{cocotb_bus,
+    author   = {cocotb},
+    title    = {cocotb-bus | Pre-packaged testbenching tools and reusable bus interfaces for cocotb},
+    date     = {2026-01-30},
+    url      = {https://github.com/cocotb/cocotb-bus},
+    addendum = {[Online; accessed: 19-March-2026]},
+    keywords = {cocotb, CocoTB}
 }

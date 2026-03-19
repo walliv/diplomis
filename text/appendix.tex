@@ -1,12 +1,96 @@
 \chapter{Installation and configuration guide}
 \label{chap:spdk_conf}
-The framework can be downloaded from the fork of its GitHub repository (cite this) and switching
-to branch XXX.
+
+The process of installation has been conducted on an Arch-based OS and installation of some
+prerequisites as well as naming of your distribution's packages may vary. It is recommended to use
+Python virtual environment or \verb|conda|/\verb|mamba| to install Python modules
+so these do not clash with system-wide installation. Make sure that you have sudo privileges on the
+PC the FPGA card is installed to. The main prerequisites are:
+\begin{itemize}
+    \item AMD Vivado 2025.1
+    \item gcc (tested with version 15.1.1)
+    \item dtc (DeviceTree compiler, tested on v1.7.2-1-g9af601c)
+    \item (optionally) mamba (workspace tool to manage Python environments)
+    \item (optionally) Packages for simulation
+    \begin{itemize}
+        \item nvc (VHDL simulator, strictly v1.18.2)\cite{nvc_sim}
+        \item cocotb (Python simulation framework, strictly v2.0.1)\cite{cocotb_homepage}
+        \item cocotb-bus (cocotb addon with generic bus models)\cite{cocotb_bus}
+    \end{itemize}
+\end{itemize}
+
+The installation and configuration is taken from the point of a single computer and consists of
+multiple steps that should be performed in the following order:
+\begin{enumerate}
+    \item building and installing the NDK-SW framework with its kernel driver, C library and Python
+    modules
+    \item installing Python modules from the NDK-FPGA framework
+    \item building the FPGA design from the NDK-FPGA framework
+    \item connecting an FPGA card and programming it with the obtained bitstream
+    \item checking that a card has been correctly initialized
+    \item building the SPDK framework
+    \item unbinding of devices
+    \item attaching the ublk driver to the kernel
+\end{enumerate}
+Finally, we introduce means of how to proceed with new FPGA designs with minimal steps for
+reconfiguration.
+
+\section{Installing ndk-sw}
+
+The \emph{ndk-sw} repository\cite{ndk_sw_github} shall be cloned and entered into. The documentation
+provides a list of steps for installing the \verb|nfb-framework| and \verb|python-nfb| packages.
+This Python installation should be installed system-wide because of its tight integration with the
+first package.  RHEL-based systems allow to download and install prebuilt packages without the need
+to do following steps:
+
+\begin{lstlisting}[
+    language=bash,
+    keywordstyle=\color{blue},
+    frame=single,
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=true,
+    breaklines=true,
+    numbers=left]
+# (optional) Deactivate mamba/conda environment (sometimes,it needs to be called multiple times)
+$ mamba deactivate
+
+# Clone the repository
+$ git clone https://github.com/CESNET/ndk-sw
+$ cd ndk-sw/
+
+# Installing prerequisites required by ndk-sw
+$ sudo ./build.sh --bootstrap
+
+cd package/
+# Build the package (specific command for Arch-based OS)
+$ makepkg -s
+
+# The command will build all of the packages and store them in the current directory as *.pkg.tar.zst archives
+
+# Install the created packages (the versions can differ based on the current release)
+$ sudo pacman -U python-nfb-tools-6.30.1-1-x86_64.pkg.tar.zst python-nfb-6.30.1-1-x86_64.pkg.tar.zst nfb-framework-6.30.1-1-x86_64.pkg.tar.zst
+
+# The installation is done by the package manager, including the installation of the kernel driver. The system should be restarted now. Otherwise the installed tools would not work on the initialized hardware.
+$ sudo reboot
+\end{lstlisting}
+
+After the installation of the packages, proceed to FPGA bitstream generation.
+
+\section{Building FPGA design}
+
+The NDK-FPGA design is built using the following steps
+
+\section{Programming the device}
+
+\section{Building SPDK application}
+
+
+
 
 \chapter{DMA Iuventus register map}
 \label{chap:iuventus_reg_map}
 
-The complete list of registers that are initalized in the \emph{Software manager} component is
+The complete list of registers that are initialized in the \emph{Software manager} component is
 listed out in \cref{tab:iuventus_reg_map}.
 
 \begin{itemize}
@@ -40,7 +124,7 @@ listed out in \cref{tab:iuventus_reg_map}.
 \endfoot
 \hline
 \endlastfoot
-0 & 0 & 0 & REG & Control & RW & R & 9 & 0: Design enable\newline 1: Sample counters\newline 2: Clear error mask\newline 3: Counters reset\newline 4: Enable update repeat \\ \hline
+0 & 0 & 0 & REG & Control & RW & R & 5 & 0: Design enable\newline 1: Sample counters\newline 2: Clear error mask\newline 3: Counters reset\newline 4: Enable update repeat \\ \hline
 1 & 4 & 4 & REG & Status & R & W & 3 & 0: Design ready\newline 1: RST Done\newline 2: Tag Initialization Done \\ \hline
 2 & 8 & 8 & REG & SQTDBL & R & W & 16 &  \\ \hline
 3 & 12 & C & REG & SQHDBL & R & W & 16 &  \\ \hline
