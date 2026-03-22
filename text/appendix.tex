@@ -38,19 +38,12 @@ reconfiguration.
 \section{Installing ndk-sw}
 
 The \emph{ndk-sw} repository\cite{ndk_sw_github} shall be cloned and entered into. The documentation
-provides a list of steps for installing the \verb|nfb-framework| and \verb|python-nfb| packages.
-This Python installation should be installed system-wide because of its tight integration with the
-first package.  RHEL-based systems allow to download and install prebuilt packages without the need
-to do following steps:
+provides a list of steps for installing the \verb|nfb-framework| package. The Python modules should
+be installed inside a virtual environment. The user can use a starter YAML file located in the
+\verb|apps/iuventus/sw/| directory in the NDK-FPGA repository. RHEL-based systems allow to download
+and install prebuilt packages without the need to do following steps:
 
-\begin{lstlisting}[
-    language=bash,
-    keywordstyle=\color{blue},
-    frame=single,
-    basicstyle=\ttfamily\small,
-    breakatwhitespace=true,
-    breaklines=true,
-    numbers=left]
+\begin{lstlisting}[caption={Installing the NDK-SW package and Python modules}]
 # (optional) Deactivate mamba/conda environment (sometimes,it needs to be called multiple times)
 $ mamba deactivate
 
@@ -67,10 +60,15 @@ $ makepkg -s
 
 # The command will build all of the packages and store them in the current directory as *.pkg.tar.zst archives
 
-# Install the created packages (the versions can differ based on the current release)
-$ sudo pacman -U python-nfb-tools-6.30.1-1-x86_64.pkg.tar.zst python-nfb-6.30.1-1-x86_64.pkg.tar.zst nfb-framework-6.30.1-1-x86_64.pkg.tar.zst
+# Install the created nfb-framework packate (the versions can differ based on the current release)
+$ sudo pacman -U nfb-framework-6.30.1-1-x86_64.pkg.tar.zst
 
-# The installation is done by the package manager, including the installation of the kernel driver. The system should be restarted now. Otherwise the installed tools would not work on the initialized hardware.
+# Install Python API to the virtual environment
+$ mamba activate my-env
+$ cd ../pynfb
+$ python -m pip install .
+
+# The system should be restarted now. Otherwise the installed tools would not work on the initialized hardware.
 $ sudo reboot
 \end{lstlisting}
 
@@ -78,14 +76,300 @@ After the installation of the packages, proceed to FPGA bitstream generation.
 
 \section{Building FPGA design}
 
-The NDK-FPGA design is built using the following steps
+The NDK-FPGA is contained within its GitHub repository\cite{ndk_fpga_iuventus_branch} where the
+branch \verb|valek-feat-dma_iuventus| needs to be switched into. The design is built using the following
+steps:
+
+\begin{lstlisting}[caption={Building the NDK-FPGA design}]
+# Clone the repository and switch to the required branch
+$ git clone git@github.com:walliv/ndk-fpga.git
+$ cd ndk-fpga
+$ git switch valek-feat-dma_iuventus
+
+# Descend in the build directory of the Iuventus app
+$ cd apps/iuventus/build/alveo-u55c
+# Start the build of the design
+$ make
+
+# The build is done using Vivado which can take several minutes. After this finishes, there are several files to notice:
+$ ls -l
+\end{lstlisting}
+
+The synthesis reports are available in \verb|*_synth.pow|, \verb|*_synth.tim| and
+\verb|*_synth.util| files whereas the reports from implementation in \verb|*_par.pow|,
+\verb|*_par.tim| and \verb|*_par.util| files. The generated DeviceTree can be seen in
+\verb|*.netcope_tmp/DeviceTree.dts| file There is the Vivado-specific bitstream \verb|*.bit| file
+and its NDK-FPGA-specific option in the \verb|*.nfw| file. The \verb|*.nfw| file is basically an
+archive containing the \verb|*.bit| bitstream and the DeviceTree file used by the NDK-SW programming
+tool for protection to check that the bitstream gets programmed into a correct hardware.
+
+The NDK-FPGA framework contains necessary Python sources to interract with different hardware
+components using the Python API installed as a part of NDK-SW. It si recommended to install these
+module inside Python or Conda/Mamba virtual environment.
+
+\begin{lstlisting}[caption={Installing NDK-FPGA Python modules}]
+$ mamba activate my-env
+
+# Go to the NDK-FPGA and source shell environment file
+$ source env.sh
+
+# Install utilities to operate with physical hardware
+$ cd python/ofm
+$ python -m pip install .
+
+# Install utilities for general models (e.g. register list)
+$ cd ../cocotbext
+$ python -m pip install .
+\end{lstlisting}
+
+ The Python modules as well as the compiled bitstream are now ready . We can now proceed to the
+ programming of the hardware.
 
 \section{Programming the device}
 
-\section{Building SPDK application}
+The first setup needs to be done in the UEFI of the computer:
+\begin{itemize}
+    \item enabling 64-bit addressing for PCIe devices (sometimes called "Above 4G encoding")
+    \item disabling the \ac{IOMMU} (when possible, otherwise described further).
+    \item disabling \ac{ACS}
+    \item enabling PCIe connectors to run on Gen4 datarates using at least 8 lanes (can be leaved on
+    auto)
+\end{itemize}
 
+The NDK-SW framework provides the easy way to program FPGA accelerator cards with the
+\verb|nfb-boot| tool. This accepts both, the \verb|*.bit| and the \verb|*.nfw| files as bitstreams,
+where the second variant is preferred. However, a card this tool is about to be applied to, need to
+run a previous NDK-FPGA design which contains necessary components to load the new bitstream into
+the configuration flash. The tool is used in the following way:
 
+\begin{lstlisting}[caption={Programming using the nfb-boot tool}]
+# Programms the specified bitstream in to the configuration slot 0
+$ nfb-boot -f0 alveo-u55c-iuventus-pcie1xGen4x8.nfw
 
+# The programming takes some while and its status is shown by the progress bar. Do not interrupt this process, would not you want to corrupt the loaded design and the boot process
+
+# For the design used in this thesis that contains two PCIe Functions, the reboot of the system is also necessary
+$ sudo reboot
+\end{lstlisting}
+
+In case an acceleration card does not currently run an NDK-FPGA design, the standard way of
+programming through \emph{JTAG} needs to be used. Most FPGA accelerators contain the
+\emph{Micro-USB} connector that operates this programming interface and the \emph{hardware server}
+provided within the Vivado environment connects to it. The programming through this is described in
+the manual~\cite{vivado_programming}. If the Vivado is running on the same machine as the FPGA
+accelerator, the hardware server is run automatically when opening the \emph{Hardware Manager}
+inside Vivado GUI and clicking on the \verb|Auto Connect|. This will locate all locally attached
+JTAG-compliant devices that can be programmed.
+
+In case the FPGA acceleration card is located on a remote machine than the one the Vivado is running
+on, a slightly different approach needs to be used by starting the hardware server remotely as
+described in~\cite{vivado_remote_hw_server}. The remote server needs at least the \emph{Vivado Lab}
+edition installed. The Hardware Manager needs to be opened on the local machine but the
+\verb|Auto Connect| feature will not work this time and the remote server needs to be explicitly
+specified as a target through the \verb|Open New Target...| option. Notice that the remote and local
+installations of the Vivado environment need to be of the same version.
+
+\begin{lstlisting}[caption={Running hardware server on the remote machine}]
+# This will run the hardware server in the background listening on port 3121
+$ /opt/Xilinx/2025.1/Vivado_Lab/bin/hw_server -p0 &
+
+****** Xilinx hw_server v2025.1
+  **** Build date : May  6 2025 at 15:14:51
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
+
+INFO: hw_server application started
+INFO: Use Ctrl-C to exit hw_server application
+
+INFO: To connect to this hw_server instance use url: TCP:hostname:3121
+\end{lstlisting}
+
+Contrary to the previous listing, the address of the \verb|hw_server| instance is actually the whole
+domain name within the internet network followed by the port number: \verb|hostname@domain:3121|,
+like \verb|my_computer@institute.uni-nowhere.de:3121| After resetting the test machine, the
+programmed device can be now detected by the NDK-SW tools.
+
+\begin{lstlisting}[caption={Showing running devices using NDK-SW tools}]
+# Primary tool that shows all FPGA acclerators with NDK-FPGA design running
+$ nfb-info -l
+ID  Base path   PCI address   Card name         Serial number   Firmware info - project
+ 0  /dev/nfb0   0000:41:00.0  ALVEO_U55C        0               IUVENTUS_TEST  1xGen4x8  0.12.0
+ 1  /dev/nfb1   0000:01:00.0  ALVEO_U55C        0               IUVENTUS_TEST  1xGen4x8  0.12.0
+ 2  /dev/nfb2   0000:02:00.0  ALVEO_U200        0               NDK_MINIMAL  100G2  0.11.0
+
+# The devices are implicitly numbered by their ID (default is 0). Without flags, the tool shows the device with index 0.
+$ nfb-info
+--------------------------------------- Board info ----
+Board name                 : COMBO-GENERIC
+Serial number              : 0
+Network interfaces         : 0
+------------------------------------ Firmware info ----
+Card name                  : ALVEO_U55C
+Project name               : IUVENTUS_TEST
+Project variant            : 1xGen4x8
+Project version            : 0.12.0
+Built at                   : 2026-03-18 19:27:06
+Build author               : vladislav.valek@email.cz
+Build revision             : c08caf5ef
+RX queues                  : 0
+TX queues                  : 0
+ETH channels               : 0
+-------------------------------------- System info ----
+PCIe Endpoint 0:
+ * PCI slot                : 0000:41:00.0
+ * PCI link speed          : 16 GT/s
+ * PCI link width          : x8
+ * NUMA node               : -1
+ * MI BAR 0 size           : 64 MiB
+
+# The important values are in the PCIe Endpoint 0 section that show that the design that is running the DMA Iuventus (marked as IUVENTUS_TEST project name) has a correct configuration of Gen4x8.
+# Other devices can be checked using the -d flag with the ID
+$ nfb-info -d2
+--------------------------------------- Board info ----
+Board name                 : COMBO-GENERIC
+Serial number              : 0
+Network interfaces         : 0
+------------------------------------ Firmware info ----
+Card name                  : ALVEO_U200
+Project name               : NDK_MINIMAL
+Project variant            : 100G2
+Project version            : 0.11.0
+Built at                   : 2025-10-21 11:17:12
+Build author               : vladislav.valek@email.cz
+Build revision             : abed9a4ae
+RX queues                  : 16 (only 0 available)
+TX queues                  : 16 (only 0 available)
+ETH channels               : 0
+-------------------------------------- System info ----
+PCIe Endpoint 0:
+ * PCI slot                : 0000:02:00.0
+ * PCI link speed          : 8 GT/s
+ * PCI link width          : x16
+ * NUMA node               : -1
+ * MI BAR 0 size           : 64 MiB
+ * MI BAR 2 size           : 16 MiB
+\end{lstlisting}
+
+\section{Building the SPDK application}
+
+If the IOMMU cannot be disabled by the UEFI settings, it can be disabled in another way by
+instructing the kernel to not use it at all which is done by kernel parameters. Another kernel
+parameter setting for this thesis encompasses the allocation of \emph{hugepages}. These allow to use
+pages of bigger size than the standard 4~KiB, like 8~KiB, 1~MiB and even
+1~GiB\cite{kernel_hugepages}. The \ac{SPDK} framework runs its core on the existing \ac{DPDK}
+software stack used for fast userspace packet processing using specialized \acp{NIC}. This stack
+recommends to allocate multiple 1~GiB hugepages if the architecture supports such
+size\cite{dpdk_hugepages}.
+
+\begin{lstlisting}[caption={Setting kernel command line parameters}]
+# Edit the GRUB_CMDLINE_LINUX variable, for example (the "quiet loglevel=3" are just examples that can be already present from the previous edit):
+# GRUB_CMDLINE_LINUX="quiet loglevel=3 amd_iommu=off default_hugepagesz=1GB hugepagesz=1G hugepages=10"
+$ sudo vim /etc/default/grub
+
+# Afterwards, the GRUB configuration needs to be refreshed (this is a permanent setting)
+$ sudo grub-mkconfig -o /boot/grub/grub.cfg
+# OR some OSes use a different command
+$ sudo update-grub
+
+# And reboot the system
+$ sudo reboot
+
+# The currently applied parameters can be checked by reading /proc/cmdline
+$ cat /proc/cmdline
+BOOT_IMAGE=/boot/vmlinuz-linux-lts root=UUID=38396817-558e-4cd4-a890-a94c8ec57c60 rw default_hugepagesz=1GB hugepagesz=1G hugepages=10 quiet loglevel=3 audit=0 nvme_load=yes amd_iommu=off
+
+# The allocated hugepages can be checked reading /proc/meminfo
+$ cat /proc/meminfo
+... some output omitted ...
+HugePages_Total:      10
+HugePages_Free:       10
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:    1048576 kB
+Hugetlb:        10485760 kB
+... some output omitted ...
+
+# To check that the IOMMU is disabled, the following directory is empty
+$ ls -l /sys/kernel/iommu_groups/
+total 0
+
+# Finally, insert ublk and uio-pci-generic driver to the kernel
+sudo modprobe uio-pci-generic
+sudo modprobe ublk_drv
+\end{lstlisting}
+
+After the initial configuration the FPGA accelerator's function 1 and the NVMe drive can now be
+unbound. The concrete \ac{BDF} identifiers can vary.
+
+\begin{lstlisting}[caption={Unbinding PCIe devices}]
+# Figure out the Vendor ID and Device ID numbers of the devices
+$ lspci -nn
+        ... output omitted ...
+41:00.0 Memory controller [0580]: Cesnet, z.s.p.o. Device [18ec:c000]
+41:00.1 Memory controller [0580]: Cesnet, z.s.p.o. Device [18ec:c020]
+        ... output omitted ...
+61:00.0 Non-Volatile memory controller [0108]: SK hynix PC611 NVMe Solid State Drive [1c5c:1639]
+        ... output omitted ...
+
+# The output shows the two functions of the FPGA accelerator, 41:00.0 and 41:00.1 and a one-function NVMe drive 61:00.0. The VID and DID numbers are written in square brackets on the end of every entry.
+
+# Write VID and DID to the uio_pci_generic driver
+$ echo "18ec c020" | sudo tee /sys/bus/pci/drivers/uio_pci_generic/new_id
+$ echo "1c5c 1639" | sudo tee /sys/bus/pci/drivers/uio_pci_generic/new_id
+
+# Bind the FPGA accelerator device to the uio_pci_generic driver
+$ echo 0000:41:00.1 | sudo tee /sys/bus/pci/drivers/uio_pci_generic/bind
+# Enable access with memory transactions, Bus Master attribute and disable pin-based interrupts
+$ sudo setpci -s41:00.1 COMMAND=0x406
+
+# The NVMe drive has to be first unbound from its native driver (nvme)...
+$ echo '0000:61:00.0' | sudo tee /sys/bus/pci/devices/0000\:61\:00.0/driver/unbind
+# ... and rebound to the uio_pci_generic
+$ echo "0000:61:00.0" | sudo tee /sys/bus/pci/drivers/uio_pci_generic/bind
+# The PCIe parameters are the same as in the case of the FPGA accelerator
+$ sudo setpci -s61:00.0 COMMAND=0x406
+\end{lstlisting}
+
+The hardware is now ready to run the \ac{SPDK} framework that can be cloned from the fork of its
+GitHub repository\cite{spdk_github} and switching to branch \verb|feat-fpga_zero_copy|
+
+\begin{lstlisting}[caption={Building the SPDK application}]
+$ git clone git@github.com:walliv/spdk.git --recursive
+$ git switch feat-fpga_zero_copy
+
+# Install dependencies with the io_uring support
+$ sudo scripts/pkgdep.sh -u
+
+# Configure framework with the ublk support and debug enabled and run build
+$ ./configure --with-ublk --enable-debug
+$ make
+\end{lstlisting}
+
+The build of the SPDK application will take some time ending with all executables stored in the
+\verb|build/| directory. There are several tools that can be tried to verify that an NVMe is
+connected.
+
+\begin{lstlisting}[caption={Testing NVMe drive using native SPDK tools}]
+$ cd build/bin
+# Calling the Identify command to read important information about state and allowed parameters of the drive (the 0000:61:00.0 is the drive that we previously unbound)
+$ sudo ./spdk_nvme_identify -r "trtype:PCIe traddr:0000:61:00.0"
+
+# Measuring performance of the NVMe drive with different parameters:
+# Testing the drive with the queue of size 1 by reading 512 bytes for 10 seconds
+$ sudo ./spdk_nvme_perf -r "trtype:PCIe traddr:0000:61:00.0" -q1 -o512 -w read -t 10
+Initializing NVMe Controllers
+Attached to NVMe Controller at 0000:61:00.0 [1c5c:1639]
+Associating PCIE (0000:61:00.0) NSID 1 with lcore 0
+Initialization complete. Launching workers.
+========================================================
+              Latency(us)
+Device Information                     :       IOPS      MiB/s    Average        min        max
+PCIE (0000:61:00.0) NSID 1 from core  0:   20948.50      10.23      47.73      45.78    2924.73
+========================================================
+Total                                  :   20948.50      10.23      47.73      45.78    2924.73
+\end{lstlisting}
+
+The installation is now ready and the examples in \Cref{sect:app_usage} can be tried out.
 
 \chapter{DMA Iuventus register map}
 \label{chap:iuventus_reg_map}
@@ -101,9 +385,9 @@ listed out in \cref{tab:iuventus_reg_map}.
     or used for configuration (marked as \verb|REG| in the table); and counters that hold sampled
     values of statistical counters (marked as \verb|CNTR| in the Type column).
     \item The \verb|SW perm.| column shows which read/write permissions to the specific register
-    does the configuration software has.
+    does the configuration software have.
     \item The \verb|HW perm.| column shows which read/write permissions to the specific register
-    does the DMA Iuventus module has.
+    does the DMA Iuventus module have.
     \item Some registers have a software Read permission marked as \emph{Strobe} which marks
     registers that need to be sampled before the current value can be read from them. This is done
     by writing bit 1 in the \emph{Control} register. This sampling is necessary because signals
