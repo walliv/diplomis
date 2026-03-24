@@ -130,14 +130,23 @@ user data in the host memory.
 
 Since this work wants to establish the \ac{P2P} communication chain between an FPGA accelerator and
 an NVMe drive which bypasses the host system, the mapping of queues as well as copy buffers has been
-moved entirely to the PCIe BARs of the accelerator. Such system is depicted in figure XXX. Because
-the mapping of PCIe BARs of the accelerator is constant, the \ac{PRP1} and \ac{PRP2} fields are
-always pointing either to the \emph{Read Buffer} (which contains data that the NVMe needs to fetch
-as a part of the write command) or to the \emph{Write Buffer} (which is a reserved space where the
-NVMe uploads its data as a part of the read command). These buffers are allocated in BARs~3 and 2
-respectively. The queue pair is located in the first two \acp{BAR} where Submission Queue is located
-on BAR~0 and Completion Queue on BAR~1. By mapping all of these data structures to the PCIe device,
-the copying of user data through host memory is entirely removed.
+moved entirely to the PCIe BARs of the accelerator. Such system is depicted
+in~\cref{fig:iuv_mem_resources}. Because the mapping of PCIe BARs of the accelerator is constant,
+the \ac{PRP1} and \ac{PRP2} fields are always pointing either to the \emph{Read Buffer} (which
+contains data that the NVMe needs to fetch as a part of the write command) or to the \emph{Write
+Buffer} (which is a reserved space where the NVMe uploads its data as a part of the read command).
+These buffers are allocated in BARs~3 and 2 respectively. The queue pair is located in the first two
+\acp{BAR} where Submission Queue is located on BAR~0 and Completion Queue on BAR~1. By mapping all
+of these data structures to the PCIe device, the copying of user data through host memory is
+entirely removed.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=1.3]{pict/ziti_easy_arch-iuventus_memory_scheme.pdf}
+    \caption[Allocated system memory resources]{Overview of allocated memory resources as
+    initialized by the SPDK application.}
+    \label{fig:iuv_mem_resources}
+\end{figure}
 
 To configure this P2P chain through SPDK, both the NVMe drive and the accelerator must be unbound
 from their default kernel drivers.
@@ -555,10 +564,18 @@ asynchronous and utilizes a pair of queues similar to the ones specified in NVMe
 the kernel or vice versa and then just wait for the completion of such batch (works as a part of the
 asynchronous I/O contrary to the traditional way which uses system calls that are blocking and only
 one can be active at a time)\cite{io_uring_whitepaper}. The scheme of how this is configured is
-depicted in fig. XXX. The ublk server asks the ublk driver to create one or more ublk devices
+depicted in~\cref{fig:spdk_ublk}. The ublk server asks the ublk driver to create one or more ublk devices
 (located in \verb|/dev/ublkb*|). One device of that sort is then formatted as a filesystem and mounted.
 Every operation on this filesystem (like read, write or flush) is forwarded through the ublk driver
 back to the server where it is processed and completed\cite{spdk_ublk,ublk_linux_kern_doc}.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=1.3]{pict/ublk.pdf}
+    \caption[Initialized SPDK ublk device]{The block scheme of the initialized application proposed in
+    this thesis running one ublk device.}
+    \label{fig:spdk_ublk}
+\end{figure}
 
 The \ac{exFAT} filesystem has been chosen for the demonstration because of its ease of
 implementation, ability to store very large files, and support for very large storages. This
