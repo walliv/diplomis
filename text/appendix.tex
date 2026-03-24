@@ -1,9 +1,9 @@
 \chapter{Installation and configuration guide}
 \label{chap:spdk_conf}
 
-The process of installation has been conducted on an Arch-based OS and installation of some
+The installation process was conducted on an Arch-based OS, and installation of some
 prerequisites as well as naming of your distribution's packages may vary. It is recommended to use
-Python virtual environment or \verb|conda|/\verb|mamba| to install Python modules so these do not
+a Python virtual environment or \verb|conda|/\verb|mamba| to install Python modules so these do not
 clash with system-wide installation. Make sure that you have sudo privileges on the PC the FPGA card
 is installed to. The main prerequisites are:
 \begin{itemize}
@@ -19,7 +19,7 @@ is installed to. The main prerequisites are:
     \end{itemize}
 \end{itemize}
 
-The installation and configuration is taken from the point of a single computer and consists of
+The installation and configuration are described from the perspective of a single computer and consist of
 multiple steps that should be performed in the following order:
 \begin{enumerate}
     \item building and installing the NDK-SW framework with its kernel driver, C library and Python
@@ -32,19 +32,19 @@ multiple steps that should be performed in the following order:
     \item unbinding of devices
     \item attaching the ublk driver to the kernel
 \end{enumerate}
-Finally, we introduce means of how to proceed with new FPGA designs with minimal steps for
+Finally, we introduce how to proceed with new FPGA designs with minimal steps for
 reconfiguration.
 
 \section{Installing ndk-sw}
 
-The \emph{ndk-sw} repository\cite{ndk_sw_github} shall be cloned and entered into. The documentation
+The \emph{ndk-sw} repository\cite{ndk_sw_github} should be cloned and entered. The documentation
 provides a list of steps for installing the \verb|nfb-framework| package. The Python modules should
 be installed inside a virtual environment. The user can use a starter YAML file located in the
 \verb|apps/iuventus/sw/| directory in the NDK-FPGA repository. RHEL-based systems allow to download
-and install prebuilt packages without the need to do following steps:
+and install prebuilt packages without the need to perform the following steps:
 
 \begin{lstlisting}[caption={Installing the NDK-SW package and Python modules}]
-# (optional) Deactivate mamba/conda environment (sometimes,it needs to be called multiple times)
+# (optional) Deactivate mamba/conda environment (sometimes, it needs to be called multiple times)
 $ mamba deactivate
 
 # Clone the repository
@@ -60,7 +60,7 @@ $ makepkg -s
 
 # The command will build all of the packages and store them in the current directory as *.pkg.tar.zst archives
 
-# Install the created nfb-framework packate (the versions can differ based on the current release)
+# Install the created nfb-framework package (the versions can differ based on the current release)
 $ sudo pacman -U nfb-framework-6.30.1-1-x86_64.pkg.tar.zst
 
 # Install Python API to the virtual environment
@@ -103,9 +103,9 @@ and its NDK-FPGA-specific option in the \verb|*.nfw| file. The \verb|*.nfw| file
 archive containing the \verb|*.bit| bitstream and the DeviceTree file used by the NDK-SW programming
 tool for protection to check that the bitstream gets programmed into a correct hardware.
 
-The NDK-FPGA framework contains necessary Python sources to interract with different hardware
-components using the Python API installed as a part of NDK-SW. It si recommended to install these
-module inside Python or Conda/Mamba virtual environment.
+The NDK-FPGA framework contains necessary Python sources to interact with different hardware
+components using the Python API installed as a part of NDK-SW. It is recommended to install these
+modules inside a Python or Conda/Mamba virtual environment.
 
 \begin{lstlisting}[caption={Installing NDK-FPGA Python modules}]
 $ mamba activate my-env
@@ -122,7 +122,7 @@ $ cd ../cocotbext
 $ python -m pip install .
 \end{lstlisting}
 
- The Python modules as well as the compiled bitstream are now ready . We can now proceed to the
+ The Python modules as well as the compiled bitstream are now ready. We can now proceed to the
  programming of the hardware.
 
 \section{Programming the device}
@@ -132,21 +132,21 @@ The first setup needs to be done in the UEFI of the computer:
     \item enabling 64-bit addressing for PCIe devices (sometimes called "Above 4G encoding")
     \item disabling the \ac{IOMMU} (when possible, otherwise described further).
     \item disabling \ac{ACS}
-    \item enabling PCIe connectors to run on Gen4 datarates using at least 8 lanes (can be leaved on
+    \item enabling PCIe connectors to run at Gen4 data rates using at least 8 lanes (can be left on
     auto)
 \end{itemize}
 
 The NDK-SW framework provides the easy way to program FPGA accelerator cards with the
 \verb|nfb-boot| tool. This accepts both, the \verb|*.bit| and the \verb|*.nfw| files as bitstreams,
-where the second variant is preferred. However, a card this tool is about to be applied to, need to
+where the second variant is preferred. However, a card this tool is about to be applied to needs to
 run a previous NDK-FPGA design which contains necessary components to load the new bitstream into
 the configuration flash. The tool is used in the following way:
 
 \begin{lstlisting}[caption={Programming using the nfb-boot tool}]
-# Programms the specified bitstream in to the configuration slot 0
+# Programs the specified bitstream into configuration slot 0
 $ nfb-boot -f0 alveo-u55c-iuventus-pcie1xGen4x8.nfw
 
-# The programming takes some while and its status is shown by the progress bar. Do not interrupt this process, would not you want to corrupt the loaded design and the boot process
+# The programming takes some time and its status is shown by the progress bar. Do not interrupt this process unless you want to corrupt the loaded design and the boot process
 
 # For the design used in this thesis that contains two PCIe Functions, the reboot of the system is also necessary
 $ sudo reboot
@@ -161,7 +161,7 @@ accelerator, the hardware server is run automatically when opening the \emph{Har
 inside Vivado GUI and clicking on the \verb|Auto Connect|. This will locate all locally attached
 JTAG-compliant devices that can be programmed.
 
-In case the FPGA acceleration card is located on a remote machine than the one the Vivado is running
+In case the FPGA acceleration card is located on a remote machine rather than the one Vivado is running
 on, a slightly different approach needs to be used by starting the hardware server remotely as
 described in~\cite{vivado_remote_hw_server}. The remote server needs at least the \emph{Vivado Lab}
 edition installed. The Hardware Manager needs to be opened on the local machine but the
@@ -186,11 +186,11 @@ INFO: To connect to this hw_server instance use url: TCP:hostname:3121
 
 Contrary to the previous listing, the address of the \verb|hw_server| instance is actually the whole
 domain name within the internet network followed by the port number: \verb|hostname@domain:3121|,
-like \verb|my_computer@institute.uni-nowhere.de:3121| After resetting the test machine, the
-programmed device can be now detected by the NDK-SW tools.
+like \verb|my_computer@institute.uni-nowhere.de:3121|. After resetting the test machine, the
+programmed device can now be detected by the NDK-SW tools.
 
 \begin{lstlisting}[caption={Showing running devices using NDK-SW tools}]
-# Primary tool that shows all FPGA acclerators with NDK-FPGA design running
+# Primary tool that shows all FPGA accelerators with an NDK-FPGA design running
 $ nfb-info -l
 ID  Base path   PCI address   Card name         Serial number   Firmware info - project
  0  /dev/nfb0   0000:41:00.0  ALVEO_U55C        0               IUVENTUS_TEST  1xGen4x8  0.12.0
@@ -292,13 +292,16 @@ Hugetlb:        10485760 kB
 # To check that the IOMMU is disabled, the following directory is empty
 $ ls -l /sys/kernel/iommu_groups/
 total 0
-
-# Finally, insert ublk and uio-pci-generic driver to the kernel
-sudo modprobe uio-pci-generic
-sudo modprobe ublk_drv
 \end{lstlisting}
 
-After the initial configuration the FPGA accelerator's function 1 and the NVMe drive can now be
+After verifying the kernel configuration, load the required userspace drivers:
+
+\begin{lstlisting}[caption={Loading userspace drivers}]
+$ sudo modprobe uio-pci-generic
+$ sudo modprobe ublk_drv
+\end{lstlisting}
+
+After the initial configuration, the FPGA accelerator's function 1 and the NVMe drive can now be
 unbound. The concrete \ac{BDF} identifiers can vary.
 
 \begin{lstlisting}[caption={Unbinding PCIe devices}]
@@ -375,13 +378,13 @@ The installation is now ready and the examples in \Cref{sect:app_usage} can be t
 \label{chap:iuventus_reg_map}
 
 The complete list of registers that are initialized in the \emph{Software manager} component is
-listed out in \cref{tab:iuventus_reg_map}.
+listed in \cref{tab:iuventus_reg_map}.
 
 \begin{itemize}
     \item Each register holds 32~bits, thus, when more bits are required, more registers are used to
     hold bigger values (denoted with either \verb|L| and \verb|H| in the Name column when only two
     registers are required or with indexes when more than 2 registers are used).
-    \item The register are of two types, namely the standard ones holding status information
+    \item The registers are of two types, namely the standard ones holding status information
     or used for configuration (marked as \verb|REG| in the table); and counters that hold sampled
     values of statistical counters (marked as \verb|CNTR| in the Type column).
     \item The \verb|SW perm.| column shows which read/write permissions to the specific register

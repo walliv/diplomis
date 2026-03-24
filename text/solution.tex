@@ -1,16 +1,16 @@
 \chapter{PCI Express}
 
 The \ac{PCIe} is the interconnect standard that emerged in 2003 from the \ac{PCI} standard. The
-\ac{PCIe} addressed the drawbacks of the \ac{PCI} that became increasingly challenging when more
+\ac{PCIe} addressed the drawbacks of the \ac{PCI} standard, which became increasingly challenging as more
 devices and more throughput were required. These include:
 
 \begin{itemize}
         \item Shared-bus topology that, in spite of its simplicity, was rendered unscalable since
-        with increasing amount of devices, the bus gets longer which weakens the signal for the
+        with an increasing number of devices, the bus gets longer, which weakens the signal for the
         farthest device.
         \item Common clock which does not fit well with parallel data transmission model especially
         when lane skew takes place, meaning the bits of data travel unevenly fast over the wires.
-        \item Half-duplex communication allows only one device to communicate at one point at a
+        \item Half-duplex communication allows only one device to communicate at a
         time.
         \item Reflected-wave signaling which was used to reduce the power consumption on the bus.
         This uses an interference of the sent wave from the master (which had driven the signal to
@@ -22,7 +22,7 @@ devices and more throughput were required. These include:
 
 % TODO: Add picture of PCI topology with some functions and one PCI-to-PCI bridge.
 
-The PCI protocol did not keep pace with increasing demand of computer peripheral communication
+The PCI protocol did not keep pace with the increasing demand for computer peripheral communication
 structures and needed to be replaced. The PCI Express protocol significantly changed the strategy
 for both the communication topology and the physical properties of the interconnect\cite{pcie_book}.
 
@@ -35,9 +35,9 @@ infrastructure (such as today's GPU/FPGA accelerators) is called \emph{Function}
 source of traffic within the system. Each Function contains an \emph{Upstream port} for
 exchanging data. Since the number of Root Ports is limited by the processor's interconnect, fan-out
 is provided by \emph{PCIe Switches}, which supply multiple \emph{Downstream ports} and a single
-Upstream port. Each port supports full-duplex communication and introduces asynchronous clocking
-model.  Using this model significantly improves the possible throughput of the interconnect where
-clock gets reconstructed from the patterns in the incoming data on the receiving port. Using
+Upstream port. Each port supports full-duplex communication and introduces an asynchronous clocking
+model. Using this model significantly improves the achievable throughput of the interconnect, where
+the clock gets reconstructed from the patterns in the incoming data on the receiving port. Using
 Switches, the number of devices can be increased arbitrarily, making PCIe a switched
 network\cite{pcie_spec}. Although the PCIe specification introduces many advanced features, this
 thesis presents mostly the necessary ones for its purposes.
@@ -50,14 +50,14 @@ thesis presents mostly the necessary ones for its purposes.
     \label{fig:pcie_basic}
 \end{figure}
 
-The PCIe specification defines an elementary addressing to identify its devices composed out of
+The PCIe specification defines elementary addressing to identify its devices, composed of
 \ac{BDF} identifiers. Every point-to-point connection in the topology makes a separate
 \emph{Bus} including internal (virtual) buses of the Switches and the Root Complex. The
-\emph{Device} identifier remained as a remnant of the PCI standard and every Bus within the PCIe
-topology contains only one. Within each Device, one or multiple \emph{Functions} can be present.
+\emph{Device} identifier remained as a remnant of the PCI standard, and every Bus within the PCIe
+topology contains only one. Within each Device, one or more \emph{Functions} can be present.
 The Function is an addressable entity in the configuration space where \emph{Endpoint} is the
 most important type of a Function. Using the term `device' in this thesis will refer to a
-general device in the PCIe topology that can contain one or multiple Functions (or
+general device in the PCIe topology that can contain one or more Functions (or
 Endpoints)\cite{pcie_spec}.
 
 % NOTE: Maybe mention BDF identifier if necessary
@@ -65,7 +65,7 @@ Endpoints)\cite{pcie_spec}.
 Devices communicate using units called \acp{TLP}, forming a packetized transfer. Each \ac{TLP}
 contains a PCIe header used for identification followed by an optional payload. There are many
 \ac{TLP} types, but the ones used in this work are \ac{MRd} and \ac{MWr}. Requests may require
-a response in the form of \ac{Cpl} presenting a third utilized
+a response in the form of \ac{Cpl}, presenting a third utilized
 \ac{TLP} type. Such requests are called \emph{non-posted} (like \acp{MRd}) while requests that do
 not require a response are called \emph{posted} (like \acp{MWr}). The device creating a request is
 called \emph{Requester}, while the device `completing' the request (sending a response or just
@@ -90,9 +90,9 @@ in~\cref{fig:pcie_transfers}.
 
 \section{Link configuration}
 
-The PCIe specification gets published in versions called \emph{generations}. With every new
+The PCIe specification is published in versions called \emph{generations}. With every new
 specification, the throughput of the bus gets doubled while keeping backward and forward
-compatibility between its standards (this is an important feature of PCIe). This is the reason, why
+compatibility between its standards (this is an important feature of PCIe). This is the reason why
 the implementation of the protocol stack remains so complicated, especially on the physical
 layer. The physical connection between two ports consists of multiple differential pairs called
 \emph{lanes} that are bundled together into a \emph{link}. Each lane allows for full-duplex
@@ -122,7 +122,7 @@ in~\cref{tab:pcie_link_speeds}.
 
 As for the physical attachment, this thesis works with two of them, namely \ac{CEM} and \emph{M.2}.
 The \ac{CEM} standard is the oldest one used for \emph{Add-in Cards} with GPU chips, FPGA
-accelerators or \acp{NIC}. It supports from 1 to 16 lanes where wider link widths supporting lower
+accelerators or \acp{NIC}. It supports from 1 to 16 lanes where wider link widths support lower
 lane counts and vice versa (these however with specially carved connectors that fit longer connector
 of the attached card). This form-factor allows for connection of the most power consuming
 peripherals where the connector can supply up to 75~W\cite{pcie_forms}. The accelerators can require
@@ -144,11 +144,11 @@ This connector has a fixed set of 4 lanes and a variable module length ranging f
 These connectors present a detachable form factor for PCIe links but the standard allows for
 permanently attached devices to be connected as well\cite{pcie_forms}.
 
-As it is obvious from the variety of link configurations in terms of data rate and the amount of
-lanes, the ports on the PCIe devices inside a compute node needs to agree on common parameters for
+As is obvious from the variety of link configurations in terms of data rate and number of
+lanes, the ports on PCIe devices inside a compute node need to agree on common parameters for
 every bus in order to facilitate data transfer. This process of negotiation is called \emph{link
 training} and it takes place after the network gets powered up. The training is done on
-per-link-basis so there are multiple differently configured links in the system at a given point in
+per-link basis so there are multiple differently configured links in the system at a given point in
 time. This is presented on~\cref{fig:pcie_diff_link_widths} where the M.2 SSD needs to communicate
 with the processor (where Root Ports can usually utilize up to 16 lanes) or with a \ac{NIC} which
 supports up to 16 lanes. Other than link width and data rate, more parameters are configured such as
@@ -175,8 +175,8 @@ device is registered if it responds with a valid \emph{Vendor ID} that is locate
 configuration registers. After assigning all \acp{BDF} in the topology, the configuration software
 further configures registers in the discovered devices. The configuration is done solely by the Root
 Complex in order to avoid the complexity of management when multiple devices (e.g. Endpoints) would
-try to configure each other. The initial assigning of configuration attributes is done using an
-IO-based transfer but further setting is done using \ac{MMIO}.
+try to configure each other. The initial assignment of configuration attributes is done using an
+I/O-based transfer, but further settings are done using \ac{MMIO}.
 
 Each Endpoint contains configuration registers in a 64-byte \emph{PCI Configuration Header}, which
 holds the most important attributes controlling the Function's ability to initiate transactions over
@@ -203,8 +203,8 @@ expensive. The newer software maps the \emph{PCIe Configuration Space} entirely 
 ditches IO-based transactions for a \emph{memory-mapped mechanism}. This allows 64-bit addressing
 that allows to encompass many PCIe Functions in the system\cite{pcie_book}.}
 
-Besides the sheer capability for devices to be localizable in the system, other parameters are
-configured and need to be abided by by user applications (e.g.\ the user-defined FPGA logic). A
+Besides the sheer capability for devices to be addressable in the system, other parameters are
+configured and need to be followed by user applications (e.g.\ the user-defined FPGA logic). A
 Function defines its supported \ac{MPS} in the \emph{Device Capabilities register}. Seeing this
 value, the configuration software sets its preferred value in a field in the \emph{Device Control
 register}. The value of this field prohibits the Transmitter to dispatch TLP with greater payload
@@ -213,7 +213,7 @@ using the \ac{MRRS} in the \emph{Device Control register} which prohibits the Tr
 dispatch a Read Request greater than the specified size. Available values for these two parameters
 range from 128 to 4096~bytes (in powers of two steps). The configuration software balances these
 parameters based on latency/bandwidth requirements in the network. The configuration has to take
-account of the pairs of adjacent devices communicating with each other since receiving a TLP whose
+into account pairs of adjacent devices communicating with each other, since receiving a TLP whose
 size is larger than the set MPS on a port results in the function rejecting this packet and
 reporting a fatal error\footnotemark.
 
@@ -224,11 +224,11 @@ reporting a fatal error\footnotemark.
 
 \section{Peer-to-peer transfer}
 
-An important aspect of PCIe (with its predecessor as well) are the \ac{DMA} transfers
+An important aspect of PCIe (with its predecessor as well) is \ac{DMA} transfer,
 that allow to copy large amounts of data without the host CPU facilitating such copying. The usual
 approach is the exchange of data between PCIe devices and the host CPU through buffers in the host
 memory. However, the network infrastructure allows to address other devices in the topology as well.
-This type of \ac{D2D} transport is called \ac{P2P} or \emph{Host Bypassing} and makes a fundamental
+This type of \ac{D2D} transport is called \ac{P2P} or \emph{Host Bypassing} and forms a fundamental
 part of this thesis. There are several implications of running such transport in the host system.
 The specification makes the P2P support for each Switch mandatory (for transport between its
 Downstream ports) but optional for the Root Complex (for transport between its Root Ports) though.
@@ -239,7 +239,7 @@ Today's host CPUs utilize \ac{IOMMU} to translate physical address to virtual on
 securely split I/O peripherals into groups\cite{iommu}. This unit is crucial in multi-tenant
 environments (like guests as virtual machines) where only devices in one group can perform P2P
 transfers between each other. Otherwise, where communication between two groups is required, the
-data need to be analyzed by the CPU. Without IOMMU a potentially malicious device can write and read
+data need to be analyzed by the CPU. Without IOMMU, a potentially malicious device can write and read
 from every region in the host system. The unit works hand in hand with the PCIe's \ac{ACS} which
 forces every traffic to pass through the \ac{rcpx} even if the devices are connected to the single
 Switch (this is shown in~\cref{fig:pcie_acs}).  Otherwise, all devices under each Root Port are put
@@ -256,7 +256,7 @@ basis\cite{pcie_acs}.
 Considering the test server used in this work, the support for P2P transfers has been discovered as
 well as the presence of multiple \acp{IOMMU} and enabled \ac{ACS} on the Root Ports. Since security
 is not a topic of this thesis nor are the system considerations in the multi-tenant environments,
-both of these functionalities have been disabled in server's UEFI. Therefore, the PCIe devices
+both of these functionalities have been disabled in the server's UEFI. Therefore, the PCIe devices
 communicate using physical addresses.
 
 \chapter{Integrated core for PCIe on FPGAs}
@@ -266,8 +266,8 @@ configured either as a Root Port (not as a \ac{rcpx} though) or an Upstream Port
 Endpoint, sometimes for Switch on some devices). The IP utilizes high-speed serial transceivers
 located on the edge of the chip that connect directly to the CEM-compliant connector on the PCB's
 edge. This work utilizes the \emph{AMD Alveo U55C} data-center acceleration card which is equipped
-with \verb|xcu55c-fsvh2892-2L-e| chip (corresponds to the serial chip
-\verb|vu57p|)\cite{alveo_u55c}. The available integrated core called \emph{PCIE4C} allows to
+with \verb|xcu55c-fsvh2892-2L-e| chip (which corresponds to the serial chip
+\verb|vu57p|)\cite{alveo_u55c}. The available integrated core called \emph{PCIE4C} allows
 configure the interface to run on Gen3 transfer rate using 16 lanes (Gen3x16) or Gen4 transfer rate
 with 8 lanes (Gen4x8) providing the same throughput but reducing logic utilization. Since two of
 these cores are provided close to each other and a total of 16 lanes is provided, these cores can
@@ -278,15 +278,15 @@ data transfer rate of PCIe Gen4x16.
 
 \section{Interfaces to user logic}
 
-Since the described core implement the whole PCIe protocol stack (meaning from Physical to
+Since the described core implements the whole PCIe protocol stack (meaning from Physical to
 Transaction layer), the user logic does not have to deal with the tasks of the lower layers, such as
 transaction buffering, flow control credit management, data integrity check, lane deskew or clock
 recovery. In terms of the PCIe topology, this core implements an Upstream port (specifically as a
 PCIe Endpoint). The core provides four separate interfaces for the user logic where each follows the
 \emph{AXI4-Stream} specification\cite{axis_spec}. As mentioned before, each PCIe port allows for
 full-duplex communication, allowing each device to act both as a Requester and as a Completer at the
-same time. The core contains these interfaces exactly in concordance with this behavior
-which include:
+same time. The core contains these interfaces exactly in accordance with this behavior,
+which includes:
 
 \begin{description}
     \item[\ac{RQ}] allows user logic to send requests to other components in the PCIe
@@ -301,7 +301,7 @@ which include:
 
 Other than that, the core provides additional interfaces for transferring status information either
 from the link or from user logic, dispatching and receiving interrupts, sending messages, etc. The
-PCIe IP maintains its set of status registers as every other PCIe Endpoint that are accessible by an
+PCIe IP maintains its set of status registers as every other PCIe Endpoint does, and they are accessible by an
 operating system. A separate interface for the Requester side (i.e. \ac{RQ} and \ac{rcpl}) can be
 used to manage flow control credits but this is not used in this work and the management is left on
 the PCIe IP.
@@ -310,9 +310,9 @@ The width of the AXI4-Stream interfaces depends on the configured transfer rate 
 implements the DMA engine using 8-lane Gen4 PCIe endpoint which results in a 512-bit wide bus
 running on 250 MHz. All of the interfaces are running on the same clock that is provided as the
 `user clock' output from the IP\cite{pcie_amd_ip}. Data units communicated on these buses are
-\acp{TLP} where every is started with a \emph{TLP header} followed by a optional payload of data. The
+\acp{TLP} where each is started with a \emph{TLP header} followed by an optional payload of data. The
 header uniquely identifies a payload within the PCIe topology with a physical address to the
-reserved space in the host memory or in another PCIe BAR. TLP header has a fixed size of 3~DW (12~B)
+reserved space in host memory or in another PCIe BAR. The TLP header has a fixed size of 3~DW (12~B)
 for RC/CC and 4~DW (16~B) for RQ/CQ interfaces.
 
 Using wide buses carries a significant drawback when data do not fill whole bus words. For example,
@@ -325,16 +325,16 @@ second segment. This feature is called \emph{Straddling}\cite{pcie_amd_ip}.
 
 \chapter{Non-volatile Memory Express}
 
-The \ac{NVMe} standard emerged in 2011 as a way of integration of non-volatile storage into the
+The \ac{NVMe} standard emerged in 2011 as a way to integrate non-volatile storage into the
 \ac{PCIe} domain\footnotemark. The standard emerged as a successor of \emph{SAS} and \emph{SATA}
 specifications in order to meet the requirements of consumer systems in terms of latency, throughput
-and scalability that fits with the flash-based storage. All of these standards introduced a queue
+and scalability that fit flash-based storage. All of these standards introduced a queue
 mechanism where commands (like write and read) are present and processed by the controller of the
-attached \ac{NVM}. Both, SATA and SAS support one command queue allowing up to 32 and 256 commands
+attached \ac{NVM}. Both SATA and SAS support one command queue allowing up to 32 and 256 commands
 respectively. NVMe enhances this mechanism by allowing to instantiate up to $2^{16}$ queues where
-each can contain up to $2^{16}$ commands\cite{nvme_overview}. Allowing to have many queues results
+each can contain up to $2^{16}$ commands\cite{nvme_overview}. Having many queues results
 in hardware-aided parallel access to the \ac{NVM} where, for example, each CPU core receives its own
-queue. The schema of the NVMe device is depicted in~\cref{fig:nvme_dev}. The \emph{NVMe controller}
+queue. The schematic of the NVMe device is depicted in~\cref{fig:nvme_dev}. The \emph{NVMe controller}
 sits on top of a PCIe controller, managing the instantiation of queues and processing of commands.
 The non-volatile storage is presented as a \emph{Namespace} which is the basic referenceable unit of
 storage in the NVMe standard\footnotemark. A namespace is split into multiple sectors of \acp{LBA}
@@ -353,7 +353,7 @@ is suitable for the \ac{P2P} communication in the PCIe domain.
 \footnotetext{This thesis works with specification version 1.2b since it describes only its basic
     concepts and not every currently working NVMe device supports the newest standard. The NVMe
     specification is designed to be backward compatible though. Using older specifications may be
-    advised for boarding users to quickly understand basic concepts.}
+    advised for onboarding users to quickly understand basic concepts.}
 
 \footnotetext{This is a simplified view in the referenced version of the NVMe specification. Later
     versions define a more complex and fine-grained classification beyond namespaces. Moreover,
@@ -362,11 +362,11 @@ is suitable for the \ac{P2P} communication in the PCIe domain.
 
 The command mechanism provides two types of queues that always occur in pairs, the \emph{Submission
 queue} and the \emph{Completion queue}. A Submission queue contains commands that need to be
-processed by the NVMe controller which, after a command's execution, returns a result of an
-operation  into a Completion queue. These queues are allocated as circular buffers in a
+processed by the NVMe controller which, after a command's execution, returns the result of the
+operation into a Completion queue. These queues are allocated as circular buffers in
 host-addressable memory. The most important pair is the \emph{Admin queue-pair} that is used for
 the startup configuration. The controller appears in the PCIe system as a single Function and,
-initially, the kernel is able to only reach the standard registers in the PCIe Configuration Space
+initially, the kernel is only able to reach the standard registers in the PCIe Configuration Space
 and its \acp{BAR}. The NVMe driver allocates Admin queue-pair and publishes base addresses and sizes
 of the queues to controller registers located in BAR0.
 
@@ -390,13 +390,13 @@ queue-pair has a fixed ID of 0 and every other I/O queue pair reserves an ID of 
 
 \section{Principles of operation}
 
-One queue requires 2 pointers for its operation, a \emph{Head doorbell} and a \emph{Tail doorbell}.
-A consumer of entries from the queue operates a Head doorbell whereas producer operates a Tail
+One queue requires two pointers for its operation, a \emph{Head doorbell} and a \emph{Tail doorbell}.
+A consumer of entries from the queue operates a Head doorbell whereas a producer operates a Tail
 doorbell. This pair of pointers ensures that a producer does not overwrite unprocessed entries and
 that a consumer reads only valid ones. A queue is considered empty if values of these pointers are
-equal, and full if a value of the Tail doorbell is equal the value of the Head doorbell minus one
-modulo size of the queue as is shown in~\cref{fig:nvme_empty_queue,fig:nvme_full_queue}. The full
-queue condition implies that the effective size of a queue , i.e. the maximum amount of entries that
+equal, and full if the value of the Tail doorbell is equal to the value of the Head doorbell minus one
+modulo the size of the queue as shown in~\cref{fig:nvme_empty_queue,fig:nvme_full_queue}. The full
+queue condition implies that the effective size of a queue, i.e. the maximum amount of entries that
 can reside in the queue, is the size of the queue minus one.
 
 \begin{figure}[!ht]
@@ -430,7 +430,7 @@ The \ac{SQE} is created by a master by following the format in~\cref{fig:nvme_sq
 defines a command within a single NVMe controller. The entry has a length of 64~B (16~DW) with
 necessary information for a controller to process a command. There are two sets of commands defined
 by the NVMe specification, namely \emph{Admin Command Set} and \emph{NVM Command Set}\footnotemark.
-The mostly used commands in this thesis on runtime are read and write from/to the \ac{NVM}.
+The most frequently used runtime commands in this thesis are read and write from/to the \ac{NVM}.
 
 \footnotetext{In terms of more recent specification revisions, these sets use the \emph{memory-based}
     transport which differs from the \emph{message-based} transport. While the first type of transport is
@@ -448,7 +448,7 @@ The mostly used commands in this thesis on runtime are read and write from/to th
 
 An \ac{SQE} begins with the \ac{OPC} field that distinguishes between different types of commands,
 the \emph{PSDT} field that specifies that \acp{PRP} are going to be used as copy buffers and the
-\ac{CID} field that presents a unique identifier when combined with the Submission Queue ID. This
+\ac{CID} field that provides a unique identifier when combined with the Submission Queue ID. This
 combination serves as a tag to match the dispatched command with a received completion. The first
 command DWord is followed by \ac{NSID} to index a specific namespace that is managed by the adjacent
 NVMe controller (the index is 1-based, meaning that the first namespace receives NSID 1).  The
@@ -459,17 +459,17 @@ memory pages span the copied data in host memory, thus how big the transfer is g
 the transfer fits into one page, only \ac{PRP1} is used and it points to the start of the user data.
 In case a transfer spans over 2 memory pages, the \ac{PRP2} is used as well to point to the second
 page. If a transfer spans more than 2 pages, the \ac{PRP2} changes its meaning to point to the
-\emph{PRP List} which contains pointers to every other page that contains to the user data (meaning
+\emph{PRP List} which contains pointers to every other page that contains user data (meaning
 from the second one onwards). The following two Dwords (DW10 and DW11) contain the \ac{SLBA} field
-pointing to the namespace followed by the last usable field in DW12 contains the \ac{NLB} to copy.
+pointing to the namespace followed by the last usable field in DW12, which contains the \ac{NLB} to copy.
 The number in this field determines the size of a transfer for a currently processed command. The
 size is limited by the NVMe controller and every master has to consult controller parameters in
-order to not submit larger transfers. When larger data need to be copied, the master have to split
+order not to submit larger transfers. When larger data need to be copied, the master has to split
 the operation into multiple I/O commands.
 
 \subsection{Command completion}
 
-After a command is processed the controller dispatches a \ac{CQE} to the Completion queue to notify
+After a command is processed, the controller dispatches a \ac{CQE} to the Completion queue to notify
 the master about the status of a command. The template of this entry is shown
 in~\cref{fig:nvme_cqe}. \ac{CQE} is at least 16 bytes in size. The first DWord is used by some
 commands to publish command-specific information (the Read and Write commands do not use them
@@ -477,7 +477,7 @@ though) while the second DWord is reserved. The NVMe controller indicates the in
 \ac{SQHDBL} through every completion entry which notifies the transmitter of commands about how many
 commands have been read by the controller (thus providing a backpressure). The \ac{SQID} and
 \ac{CID} fields serve as a unique identifier of a command for the used NVMe controller. The \ac{SQID} is
-present because the NVMe specification allows to associate multiple Submission queue with one
+present because the NVMe specification allows associating multiple Submission queues with one
 Completion queue (this applies for one NVMe controller though since every controller maintains its
 own set of queues). A \emph{Phase Tag (P)} field follows and its value indicates that the current
 position in the Completion queue is valid (meaning the position to which \ac{CQHDBL} points to). The
@@ -495,11 +495,11 @@ pointer rolls back to 0, then to 1 again and so on.
 
 The last bits of a CQE are occupied by status information about the successful/unsuccessful
 execution of a command. The \ac{DNR} bit indicates that if the same command is going to be
-resubmitted, it is expected to fail. The submitter has to wait till this bit clears to 0 in order to
+resubmitted, it is expected to fail. The submitter has to wait until this bit clears to 0 in order to
 receive valid data. The \emph{More (M)} bit indicates that a completion for a command is going to be
-composed out of multiple \acp{CQE}. A more specific information about a command's status can be
-found in the \ac{SCT} and \ac{SC} fields. The NVMe controller provides coarse-grained category of
-status within the first field whereas a more fine-grained in the second one. Here are some examples
+composed of multiple \acp{CQE}. More specific information about a command's status can be
+found in the \ac{SCT} and \ac{SC} fields. The NVMe controller provides a coarse-grained category of
+status within the first field, whereas a more fine-grained one in the second. Here are some examples
 of possible status codes received:
 
 \begin{itemize}
@@ -510,16 +510,16 @@ of possible status codes received:
         \emph{LBA Out of Range}).
     \item Submitting two NVMe Write/Read commands with the same \ac{CID} results in a completion
         status where SCT is set to 1h (i.e.\ \emph{Command Specific Status}) and SC set to 80h
-        (i.e.\ \emph{Conflicting Attibutes}).
+        (i.e.\ \emph{Conflicting Attributes}).
 \end{itemize}
 
 \subsection{Ordering}
 
-An important note has to be made with regards to ordering of submitted commands. An NVMe controller
+An important note has to be made with regard to the ordering of submitted commands. An NVMe controller
 arbitrates between its own set of submission queues in a round-robin fashion and can fetch multiple
 commands out of every queue\footnotemark. The order of execution where many commands are fetched is
 not defined by the NVMe specification and can be arbitrary. This is the reason why a tagging of
-commands using the \ac{CID} field is important so the submitter can bound a completion to a
+commands using the \ac{CID} field is important so the submitter can bind a completion to a
 dispatched command. The order of execution can therefore be derived from the order in which the
 completions for multiple commands have been received. If strict ordering of commands is required,
 the submitter needs to implement its own mechanism for that. However, by the means of the NVMe
@@ -528,7 +528,7 @@ operations} in order to force ordering of two subsequent commands. Such two comm
 atomically, resulting in the success only if both of the commands succeed. However, this feature is
 optional and not every device contains it. The second way that is always available, is to
 submit only one command to the submission queue and wait for its completion before submitting
-another commands. This can be guarded by the submitter itself or by initializing the submission
+another command. This can be guarded by the submitter itself or by initializing the submission
 queue with the size of 2 (since this can contain at most 1 valid SQE) and using the blocking by the
 doorbell pointers. This way is used in the implementation described further in this thesis.
 
