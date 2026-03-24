@@ -5,16 +5,16 @@ device that is shared between the host OS and an FPGA accelerator a specific IP 
 the accelerator's side. Without this, the user logic inside an FPGA would deal with raw PCIe data
 not only from the adjacent NVMe device but from the host system as well. Therefore, the \emph{DMA
 Iuventus} IP core has been developed to process requests between an accelerator and an NVMe
-device\cite{iuventus_github}. The \ac{DMA} description has been retained to highlight the mechanism
-of the direct copying of data to the adjacent storage without a host CPU facilitating such transfers
-(this is sometimes called \emph{Host bypassing}). This IP sits on the integrated block for PCIe of
-the FPGA to accept NVMe-specific traffic alongside with a logic that processes transactions to
-\ac{C/S} registers.
+device\cite{iuventus_github}. The term "DMA" has been retained to highlight the mechanism of the
+direct copying of data to the adjacent storage without a host CPU facilitating such transfers (this
+transfer in a \ac{P2P} manner is sometimes called \emph{Host bypassing}). This IP sits in the FPGA on the
+integrated block for PCIe to accept NVMe-specific traffic alongside with logic that
+processes transactions to \ac{C/S} registers.
 
 \section{TLP Headers}
 
 The DMA IP utilizes 3 of the 4 interfaces provided by the integrated block for PCI Express, namely
-\ac{RQ}, \ac{CQ}, \ac{CC}. Each on of these uses its own template of the TLP header that the DMA
+\ac{RQ}, \ac{CQ}, \ac{CC}. Each one of these uses its own template of the TLP header that the DMA
 core needs to create or process. The \ac{RQ} header has a size of 4~DW and its format is depicted
 in~\cref{fig:pcie_tlp_rq_hdr}. The \emph{Address} field is aligned with respect to DWords since its
 two bottom bits are reserved\footnotemark. For \acp{MWr}, the \emph{Dword count} field specifies the
@@ -48,8 +48,8 @@ of this header are either reserved or used to create a response for \ac{MRd}.
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-cq_hdr}
     \caption[Format of the header used on the \acl{CQ} interface]{Format of the header used on the
-        \acl{CC} interface. The yellow fields are used by the DMA
-        Iuventus core itself whereas the green ones are only used to create the CC header.}
+        \acl{CC} interface. The yellow fields are used by the DMA Iuventus core itself whereas the
+        green ones are only used to create the CC header of the response.}
     \label{fig:pcie_tlp_cq_hdr}
 \end{figure}
 
@@ -75,7 +75,9 @@ Tag field which marks all Completions for a specific Request. A Completion can b
 multiple TLPs (especially if the MRRS of the Completer is bigger that the MPS value) which is
 controlled using the \emph{Byte count} field. The value indicates the remaining amount of bytes that
 are needed to complete a request including the length of the current payload. The last Completion
-TLP has hast the value of \emph{Byte count} equal to the byte-length of its payload\cite{pcie_amd_ip}.
+TLP has the value of \emph{Byte count} equal to the byte-length of its payload\cite{pcie_amd_ip}.
+
+% TODO : put a figure about how the Byte Count field works
 
 \begin{figure}[!ht]
     \centering
@@ -90,7 +92,7 @@ TLP has hast the value of \emph{Byte count} equal to the byte-length of its payl
 
 This thesis utilizes the \emph{NDK-FPGA} framework developed by \emph{CESNET,
 a.l.e.}\cite{ndk_fpga_github}. This framework serves as a development platform for datacenter-grade
-FPGA acceleration cards providing stable communication infrastructure and allowing to instantiate a
+FPGA acceleration cards providing stable communication infrastructure and allowing to instantiate
 custom user logic. In order to provide the software control, the \emph{NDK-SW} package is
 delivered besides the previous framework\cite{ndk_sw_github}. This package allows to access internal
 \ac{C/S} registers of various components within the FPGA logic from userspace. Additionally, this
@@ -98,21 +100,21 @@ thesis utilizes the \ac{SPDK} framework in order to correctly configure an NVMe 
 a \ac{P2P} communication chain between an accelerator card and the storage drive. SPDK is a
 userspace framework to create high-performance applications where drivers are running in the
 userspace\cite{spdk_paper}. This enables fast prototyping without the need to operate with kernel
-modules which can cause fatal system failures if not done carefully.
+modules which can cause fatal system failures if not done carefully\cite{kernel_usr_io}.
 
 A device that is normally maintained by a kernel driver can only be accessed by a defined API that
 usually utilizes the \emph{sysfs} filesystem or, when used in custom applications, the \emph{ioctl}
-calls with defined flags. Upon every modification of such driver, it needs to be compiled and
-inserted into the kernel not to mention the limited possibilities of debugging. This mechanism,
-however, prevents malicious applications from accessing the MMIO resources directly. In order to
-move all of the control to the userspace, a device needs to be unbound from a particular driver and
-bound to a new driver\footnotemark. The Linux kernel stack provides two "dummy" drivers that serve
-the purpose of this thesis. If \ac{IOMMU} is disabled, the system operates only with physical
-addresses, the device needs to be bound to the \verb|uio_pci_generic| driver, whereas, if enabled,
-the system operates with \acp{IOVA} and the \verb|vfio-pci| driver needs to be used. Both of these
-drivers exposes devices' BARs to the userspace where they can be managed by standard memory
-operations. Since using the first approach with disabled IOMMU, the application need to be run as
-the root user.
+calls with defined flags\cite{linux_drivers}. Upon every modification of such driver, it needs to be
+compiled and inserted into the kernel not to mention the limited possibilities of debugging. This
+mechanism, however, prevents malicious applications from accessing the MMIO resources directly. In
+order to move all of the control to the userspace, a device needs to be unbound from a particular
+driver and bound to a new driver\footnotemark. The Linux kernel stack provides two "dummy" drivers
+that serve the purpose of this thesis. If \ac{IOMMU} is disabled, the system operates only with
+physical addresses, the device needs to be bound to the \verb|uio_pci_generic| driver, whereas, if
+enabled, the system operates with \acp{IOVA} and the \verb|vfio-pci| driver needs to be used. Both
+of these drivers exposes devices' BARs to the userspace where they can be managed using \ac{MMIO}.
+Since using the first approach with disabled IOMMU, the application need to be run as the root
+user\cite{kernel_usr_io,dpdk_usr_drivers,spdk_usp_drivers, spdk_dma}.
 
 \footnotetext{For concrete steps of how to unbind a device, check the~\cref{chap:spdk_conf}}
 
@@ -121,17 +123,17 @@ the root user.
 The~\cref{fig:nvme_init_system} presents a standard customer system with a main NVMe drive and an
 instantiated set of queues for every core on the processor. The queues that are created for this
 purpose are normally stored in the host memory where the 2 buffers get allocated for every queue
-pair as can be seen on figure XXX. The data buffers are dynamically generated since values of
-\ac{PRP1} and \ac{PRP2} can vary with every dispatched command, therefore conforming to the very
-principle of the \ac{DMA} where data do not have to be copied to special "copy" buffers. The values
-of these fields can therefore point directly to user data in the host memory.
+pair. The data buffers are dynamically generated since values of \ac{PRP1} and \ac{PRP2} can vary
+with every dispatched command, therefore conforming to the very principle of the \ac{DMA} where data
+do not have to be copied to special intermediate buffers but the pointers can directly reference
+user data in the host memory.
 
 Since this work wants to establish the \ac{P2P} communication chain between an FPGA accelerator and
 an NVMe drive which bypasses the host system the mapping of queues as well as copy buffers has been
 moved entirely to the PCIe BARs of the accelerator. Such system is depicted in figure XXX. Because
 the mapping of PCIe BARs of the accelerator is constant the \ac{PRP1} and \ac{PRP2} fields are
 always pointing either to the \emph{Read Buffer} (which contains data that the NVMe needs to fetch
-as a part of the write command)) or to the \emph{Write Buffer} (which is a reserved space where the
+as a part of the write command) or to the \emph{Write Buffer} (which is a reserved space where the
 NVMe uploads its data as a part of the read command). These buffers are allocated in BARs~3 and 2
 respectively. The queue pair is located in the first two \acp{BAR} where Submission Queue is located
 on BAR~0 and Completion Queue on BAR~1. By mapping all of these data structures to the PCIe device,
@@ -139,18 +141,19 @@ the copying of user data through host memory is entirely removed.
 
 The \emph{NDK-SW} framework provides its own kernel driver in order to operate on the PCIe device
 and to access its \ac{C/S} registers. However, in order they can be configured via SPDK to establish
-a P2P communication chain, the NVMe device as well as the FPGA accelerator need to be unbound. The
-unbinding simplifies the configuration of each device which directly exposes its BARs' physical
-addresses and its PCIe Configuration Space to the userspace. The NVMe device can be entirely unbound
-since no original kernel driver is used and everything considering a device initialization is
-handled by the SPDK framework. On the other hand, with regards to the FPGA accelerator, a different
-approach had to be chosen, namely to create a second PCIe Function on the device. This allows two
-drivers in the host system to operate on one device while keeping separate Configuration Space for
-each one of them. Having this, the access to the configuration registers of the FPGA's user logic
-can be preserved while a custom driver for the P2P communication chain can be used besides that.
-Since there is only one PCIe IP per one physical connector on the FPGA chip, all of the requests
-pass through same interfaces to the user logic and have to be split according to the function index
-and the BAR ID.
+a P2P communication chain, the NVMe device as well as the FPGA accelerator need to be unbound.
+% The
+% unbinding simplifies the configuration of each device which directly exposes its BARs' physical
+% addresses and its PCIe Configuration Space to the userspace.
+The NVMe device can be entirely unbound since no original kernel driver is used and everything
+considering a device initialization is handled by the SPDK framework. On the other hand, a different
+approach had to be chosen for the accelerator, namely to create a second PCIe Function on the
+device. This allows two drivers in the host system to operate on one device while keeping separate
+Configuration Space for each one of them. Having this, the access to the configuration registers of
+the FPGA's user logic can be preserved while a custom driver for the P2P communication chain can be
+used besides that. Since there is only one PCIe IP per one physical connector on the FPGA chip, all
+of the requests pass through same interfaces to the user logic and have to be split according to the
+function index and the BAR ID\cite{pcie_amd_ip}.
 
 \subsection{Queue initialization}
 
@@ -159,7 +162,8 @@ Especially, this involves the allocation and assignment of Admin queue-pair whos
 stored in the controller's registers (remember that these registers reside in the PCIe BAR of the
 NVMe drive). The NVMe controller has two ways of configuration, either through its registers (works
 every time) or through its Admin queue pair (after it gets allocated) using the \emph{Set Features}
-command. The following list describes the specific case for the solution presented in this thesis
+command.
+The following list describes the specific case for the solution presented in this thesis
 and not the general one presented in the specification.
 
 \begin{enumerate}
@@ -183,15 +187,24 @@ and not the general one presented in the specification.
     \item The \emph{Create I/O Completion Queue} command is submitted in order to register the
     queue on the controller.
     \item The host allocates an I/O Submission queue in the BAR~0 of the FPGA accelerator and
-    submits the \emph{Create I/O Completion Queue} command to register this queue on the controller.
+    submits the \emph{Create I/O Submission Queue} command to register this queue on the controller.
     \item The Queue ID 2 is reserved for the queue pair for the host to create and maintain a
     filesystem on the NVMe storage.
     \item The host allocates regions in the host memory that are going to hold its I/O queue pair.
     The Completion queue is cleared in the same way as in the case of the FPGA accelerator.
     \item The queues are registered in the same order as previously, first the Completion queue,
     then the Submission queue.
-    \item The system is now ready to operate and write/read data to/from the non-volatile storage.
+    \item The system is now ready to operate and write/read raw data to/from the non-volatile
+    storage.
 \end{enumerate}
+
+The current configuration can be read by three means similar to the manners in which a startup
+attributes are written. The BAR~0 of the NVMe controller can be consulted or the \emph{Get Features}
+command can be submitted to the admin queue-pair. Moreover, the NVMe controller can provide more
+detailed information by submitting the \emph{Identify} command. This command provide substantial
+amount of information with regards to the capabilities of either the controller or a namespace
+attached to it. These information are then copied to the \emph{Identify Controller} and
+\emph{Identify Namespace} data structures in the host memory\cite{nvme_spec}.
 
 \footnotetext{Remember that the Queue ID is used in the \ac{CQE} as a part of a command's unique
     identifier since multiple I/O Submission queues can share one I/O Completion queue}
@@ -203,7 +216,7 @@ and not the general one presented in the specification.
 The P2P chain between the FPGA accelerator and the NVMe drive has been partially established by
 creating the accelerator-owned queue pair. In order to perform the full P2P communication, the host
 allocates the BAR~2 and BAR~3 of the accelerator and publishes its physical addresses to the
-Iuventus module so the submitted commands to the NVMe target the internal buffers of the FPGA.
+DMA Iuventus module so the submitted commands to the NVMe target the internal buffers of the FPGA.
 
 \subsection{Read command}
 
@@ -212,7 +225,7 @@ command is submitted by writing one \ac{SQE} data structure to the Submission qu
 corresponding \ac{SQTDBL} (in case of the accelerator queue pair, this would be SQ1TDBL, whereas for
 the host-side, the SQ2TDBL). Afterwards, the controller sends a \ac{MRd} to the Submission queue to
 fetch the command. The requester (either the DMA Iuventus module or the host software) responds with
-one \ac{Cpl} TLP packet. The controller then proceeds to execute the command. The read command
+one or more \ac{Cpl} \acp{TLP}. The controller then proceeds to execute the command. The read command
 targets either the accelerator's or the host's \emph{Write buffer} which is specified in command's
 \ac{PRP1} and \ac{PRP2} fields. The NVMe controller can send the data in one or multiple \acp{MWr}.
 Finally, to signalize the end of command execution, a \ac{CQE} is written to the Completion queue.
@@ -231,13 +244,14 @@ value).
     \label{fig:nvme_rd_cmd}
 \end{figure}
 
-If it needs to be used, the \emph{PRP List} has been created in the host memory as part of FPGA
-device initialization. This list resides in the host memory for every requester regardless if the
-accelerator or the host engages in the communication. The values of its elements for the FPGA
-accelerator are constant (that is because the mapping of BARs does not change) whereas for the host
-side, it is created on the go\footnotemark.
-
-% TODO: Mention limitation of the maximum transfer size that can be dispatched within one IO Command
+The \emph{PRP List} is created in the host memory as part of FPGA device initialization as well.
+This list resides in the host memory for every requester regardless if the accelerator or the host
+engages in the communication. The values of its elements for the FPGA accelerator are constant (that
+is because the mapping of BARs does not change) whereas, for the host side, it is created on the
+go\footnotemark. Although the PRP List can be arbitrary long and thus arbitrary long transfers
+can be executed by NVMe commands, the NVMe controller puts limitations on this. This limit is
+published in the \emph{Identify Controller} data structure in the \ac{MDTS} field. This applies to
+the write command as well.
 
 \footnotetext{The API of the SPDK framework already contains built-in functions to dispatch
 read/write commands to the NVMe device and the maintenance of the PRP List is, therefore, left to
@@ -246,11 +260,11 @@ its own devices.}
 \subsection{Write command}
 
 The write command contains additional steps with comparison to the read command as seen
-in~\cref{fig:nvme_wr_cmd}. The NVMe controller fetches the command in a similar manner, by receiving
-an \ac{SQTDBL} update, dispatching the \ac{MRd} to the requester and receiving completions with
+in~\cref{fig:nvme_wr_cmd}. The NVMe controller fetches the command(s) in a similar manner, by receiving
+the \ac{SQTDBL} update, dispatching the \ac{MRd} to the requester and receiving completions with
 \ac{SQE} data. Afterwards, as a part of command execution, the controller dispatches one or multiple
 \acp{MRd} to requester's \emph{Read buffer} to fetch the data that are received consequently in one
-or multiple \acp{Cpl}. The end of a command execution is marked by the write of a \ac{CQE} with the
+or multiple \acp{Cpl}. The end of command execution is marked by the write of a \ac{CQE} with the
 status of the execution. Similarly, the controller can fetch multiple commands and process them as a
 batch, dispatching the completion every time. The requester then, after processing the \ac{CQE},
 updates the corresponding value of \ac{CQHDBL}. Optionally, the requester can issue a \emph{Flush}
@@ -272,46 +286,52 @@ cache when it shuts down.
 \section{Hardware implementation}
 
 The hardware architecture enables full P2P communication between an FPGA accelerator and an NVMe
-device. This architecture is depicted in fig XXX. The architecture transports data in streaming
-buses rather than memory-mapped ones. The only exception is the \ac{MI} interface\cite{ndk_mi_spec}
-connected to the \verb|Software manager| that contains the \ac{C/S} registers to configure the DMA
-module. This operates on memory-mapped chunks of 32~bits. The streaming interfaces, namely
-\verb|CQ|, \verb|CC|, \verb|RQ|, \verb|Read Data| and \verb|Write Request + Data| follow the
-\ac{MFB} specification\cite{ndk_mfb_spec}.
+device. This architecture is depicted in~\cref{fig:iuventus_block}. The architecture transports data
+on streaming buses rather than memory-mapped ones. The only exception is the \ac{MI}
+interface\cite{ndk_mi_spec} connected to the \verb|Software manager| that contains the \ac{C/S}
+registers to configure the DMA module. This operates on memory-mapped chunks of 32~bits. The
+streaming interfaces, namely \verb|CQ|, \verb|CC|, \verb|RQ|, \verb|Read Data| and
+\verb|Write Request + Data| follow the \ac{MFB} specification\cite{ndk_mfb_spec}.
 
-Although the PCIe IP's interfaces conform to the AXI-Stream standard, this protocol had to be
-arbitrarily extended since, in order to provide higher throughput, the bus operates in the
-\emph{Straddling} mode. This mode splits a transfer\footnotemark\@ into two logical regions where
-each region can contain a start of a packet. If the first packet ends in the first region, the
-second packet can begin in the second region, thus effectively increasing throughput for packets
-that align is such way and, especially, for small packets that fit in one region. This extension
-includes adding more subsignals to the \verb|TUSER| while ignoring the \verb|TKEEP| signal since
-this only works when only one region is utilized.
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=1.0]{pict/dma_iuventus_scheme.pdf}
+    \caption[DMA Iuventus block scheme]{DMA Iuventus block scheme}
+    \label{fig:iuventus_block}
+\end{figure}
+
+Because of the \emph{Straddling} feature on the PCIe IP's interfaces conforming to the AXI-Stream
+standard, this protocol had to be arbitrarily extended. This mode splits a transfer\footnotemark\@
+into two logical regions where each region can contain a start of a packet. If the first packet ends
+in the first region, the second packet can begin in the second region, thus effectively increasing
+throughput for packets that align is such way and, especially, for small packets that fit in one
+region. This extension includes adding more subsignals to the \verb|TUSER| while ignoring the
+\verb|TKEEP| signal since this only works when only one region is utilized.
 
 \footnotetext{One transfer corresponds to one bus beat, meaning a clock period when both TVALID and
     TREADY are high, i.e. both the Transmitter and the Receiver are ready to transfer
     data\cite{axis_spec}.}
 
-\ac{MFB} has been created to exactly address this issue of dispatching multiple packets in one clock
+\ac{MFB} has been created to exactly address this issue of dispatching multiple frames (or packets) in one clock
 cycle and does not need additional signals to facilitate that. A transfer consists out of multiple
 \emph{regions}, where each is composed of 1 or more \emph{blocks}. Each block contains then 1 or
-more \emph{items} and each of the items is n bits long. All of the provided interfaces of the PCIe
+more \emph{items} and each of the items is n bits long. All of the used interfaces of the PCIe
 IP have the same configuration, that is 2 regions, 1 block, 8 items and 32 bits\footnotemark\@ per
 item (referred to in a short form as the \emph{2,1,8,32} configuration) resulting in 512~bits. MFB
 consists of following signals:
 
 \footnotetext{Setting the item size to 32 bits is in accord with the PCIe interface operating with
-    DWords as the smallest atomic units.}
+    DWords as the smallest atomic unit.}
 
 \begin{description}
-    \item[DATA] containing packet payload.
-    \item[META] containing optional metadata to the packet. The metadata can be aligned either with
-    a SOF of a packet (default) or with an EOF.
-    \item[SOF] indicating which regions of a transfer contain a start of a packet.
-    \item[EOF] indicating which regions contain an end of a packet.
-    \item[SOF\_POS] Pointer for every region where the start of a packet is located. A packet can be
+    \item[DATA] containing frame payload.
+    \item[META] containing optional metadata to the frame. The metadata can be aligned either with
+    a SOF of a frame (default) or with an EOF.
+    \item[SOF] indicating which regions of a transfer contain a start of a frame.
+    \item[EOF] indicating which regions contain an end of a frame.
+    \item[SOF\_POS] Pointer for every region where the start of a frame is located. A frame can be
     started with resolution to \emph{blocks}.
-    \item[EOF\_POS] Pointer for every region where the end of a packet is located. A packet can be
+    \item[EOF\_POS] Pointer for every region where the end of a frame is located. A frame can be
     ended with resolution to \emph{items}.
     \item[SRC\_RDY] When high, indicates that a transmitter wants to send data.
     \item[DST\_RDY] When high, indicates the readiness of a receiver to accept data.
@@ -333,15 +353,15 @@ component gets configured by the host software by setting the following register
 
 \begin{itemize}
     \item \verb|DBL Mask| that serves as a mask of all Doorbell pointers. This mask is determined by
-    the sizes of each queue.
+    the size of the queues.
     \item \verb|SQTDBL Base Addr H| and \verb|SQTDBL Base Addr L| that contain the address of
     \verb|SQ1TDBL| in the NVMe BAR.
     \item \verb|CQHDBL Base Addr H| and \verb|CQHDBL Base Addr L| that contain the address of
     \verb|CQ1HDBL| in the NVMe BAR.
     \item \verb|RD Buff Base Addr H| and \verb|RD Buff Base Addr L| that contain the address of the
     read buffer allocated in the accelerator's BAR~3. This address needs to be supplied by the
-    configuration software since the PCIe IP does not provide an interface to read values in BARs of
-    the PCIe Configuration Header.
+    configuration software since the PCIe IP does not provide an interface to read values in its own
+    BARs of the PCIe Configuration Header.
     \item \verb|RD Buff PRP List Base H| and \verb|RD Buff PRP List Base L| that contain the base
     address of the read buffer's PRP List (this list resides in the host memory).
     \item \verb|WR Buff Base Addr H| and \verb|WR Buff Base Addr L| that contain the address of the
@@ -351,7 +371,8 @@ component gets configured by the host software by setting the following register
     address of the write buffer's PRP List (this list resides in the host memory).
     \item \verb|LBA Num Mask| that serves as a limit of the amount of LBAs that can be transferred
     within a single NVMe command (i.e. the maximum amount that can be assigned to the \ac{NLB}
-    field in a \ac{SQE}).
+    field in a \ac{SQE} as specified in the \ac{MDTS} field in the \emph{Identify Controller} data
+    structure).
     \item \verb|LBA Space Size H| and \verb|LBA Space Size L| that contain the total amount of
     usable LBAs on the provided Namespace regardless of if some \acp{LBA} have already been written
     in the past.
@@ -363,23 +384,23 @@ acknowledgement happens after all internal components are initialized.
 
 \subsection{Read command submission}
 
-The user logic requests a read from the NVMe device on the \verb|Read Request| interface (Fig
-XXX). This is achieved by setting the amount of LBAs to read on the \verb|NVME_RD_REQ_LBA_NUM| and
-the starting address of the first LBA on \verb|NVME_RD_REQ_LBA_PTR| inputs. The valid request is
-confirmed by setting \verb|NVME_RD_REQ_VLD| to high which is acknowledged by the
-\verb|Operation control| component by asserting \verb|NVME_RD_REQ_RDY|. Because of the hardware
-constraints explained further, the amount of LBAs that can be requested by the user logic on the
-\verb|NVME_RD_REQ_LBA_NUM| is capped to 256 (i.e. this signal has a width of 8 bits).
+The user logic requests a read from the NVMe device on the \verb|Read Request| interface
+(\Cref{fig:iuventus_block}). This is achieved by setting the amount of LBAs to read on the
+\verb|NVME_RD_REQ_LBA_NUM| and the starting address of the first LBA on \verb|NVME_RD_REQ_LBA_PTR|
+inputs. The valid request is confirmed by setting \verb|NVME_RD_REQ_VLD| to high which is
+acknowledged by the \verb|Operation control| component by asserting \verb|NVME_RD_REQ_RDY|. Because
+of the hardware constraints explained further, the amount of LBAs that can be requested by the user
+logic on the \verb|NVME_RD_REQ_LBA_NUM| is capped to 256 (i.e. this signal has a width of 8 bits).
 
 After \verb|Operation control| acknowledges the request, it checks that the request size with its
-starting pointer does not exceed the Namespace size. The component decides the values of \ac{PRP1}
-and \ac{PRP2} fields for the command based on the amount of memory pages that will be transferred.
-After that, the NVMe Read command is created in the \verb|SQ Cmd Dispatcher| from the provided
-parameters that were previously assigned to the \ac{C/S} registers.SQ Cmd Dispatcher maintains an
-internal FIFO of available \acp{CID} that are assigned to every dispatched command. Reading the
-status of this FIFO helps to assert the amount of flying commands that are currently
-executed/waiting on the NVMe controller. This status is available in the \ac{C/S} registers as the
-\verb|TAG FIFO Status| field.
+starting pointer does not exceed the Namespace size (thus writing over namespace boundary). The
+component decides the values of \ac{PRP1} and \ac{PRP2} fields for the command based on the amount
+of memory pages that will be transferred. After that, the NVMe Read command is created in the
+\verb|SQ Cmd Dispatcher| from the provided parameters that were previously assigned to the \ac{C/S}
+registers. SQ Cmd Dispatcher maintains an internal FIFO of available \acp{CID} that are assigned to
+every dispatched command. Reading the status of this FIFO helps to assert the amount of flying
+commands that are currently executed/waiting on the NVMe controller. This status is available in the
+\ac{C/S} registers as the \verb|TAG FIFO Status| field.
 
 The command is then stored in the \verb|Sub Queue| located in the \verb|PCIe Transaction Buffer|.
 Originally, this buffer has been developed as a part of the DMA Calypte project\cite{calypte_github}
@@ -397,13 +418,12 @@ Read/Write buffer. The size of each sector corresponds to exactly 256~LBAs.
 
 As soon as the \verb|SQ Cmd Dispatcher| creates the command and stores it in the Submission queue it
 sends an update of the \ac{SQTDBL} to the \verb|Doorbell updater|. This queues this update for a
-dispatch which ist then dispatched whenever the \ac{RQ} interface is ready. After restart or a long
+dispatch which is then dispatched whenever the \ac{RQ} interface is ready. After restart or a long
 period where the pointer has not been updated, the update is dispatched immediately. After
 dispatching one update, the delay counter is activated. The pointer can be further updated during
-this delay but the counter dispatches the final value after the delay comes to an end. This
-mechanism has been added to enable submitting multiple commands and then fetching them in batch.
-This reduces the pressure on the PCIe interface by lowering the amount of \acp{TLP} containing only
-synchronization data.
+this delay but the update is dispatched first when the delay expires. This mechanism has been added to
+enable submitting multiple commands and then fetching them in batch. This reduces the pressure on
+the PCIe interface by lowering the amount of \acp{TLP} containing only synchronization data.
 
 The \acl{MRd} from the NVMe controller arrives on the CQ interface and is routed from the
 \verb|CQ Metadata Extractor| to the \verb|PCIe Header FIFO|. The Metadata extractor calculates the exact byte
@@ -429,7 +449,7 @@ detects the received \ac{CQE} based of the current value of the \ac{CQHDBL} and 
 tag}. The component then returns the status of the command to the \verb|Operation control| and
 updates the value of \ac{CQHDBL}\footnotemark in the \verb|Doorbell updater|. When the returned
 status is successful, the \verb|Operation control| then reads the data from the \verb|Write buffer|,
-thus publishing them to the user logic. Additionally, the status of the command is returned on the
+thus returning them to the user logic. Additionally, the status of the command is returned on the
 \verb|Operation status| interface. When the \verb|OP_STAT_TYPE| signal on this interface is set
 high, the status of the last read read request is returned, otherwise, when set to low, the status
 of the last write request is returned. For the accurate distinction of status, the
@@ -468,36 +488,44 @@ should not be longer than 128~KiB in order to fit to the buffer. If a packet is 
 gets truncated to fit in and the rest of its data is dropped.
 
 After receiving a packet's length, the \verb|Operation control| checks if the amount of data that
-are going to be written to the NVMe on the specified \ac{LBA} does not cross a Namespace boundary.
+are going to be written to the NVMe on the specified \ac{LBA} does not cross the namespace boundary.
 When this check passes the component submits an NVMe Write command in the same way as the previously
 described submission of the read command, i.e. by writing the command to the Submission queue and
 then updating the \ac{SQTDBL} in the \verb|Doorbell updater|. The NVMe controller reads that command
-from the Submission queue whose data are then returned on the \ac{CC} interface. Upon execution of
+from the Submission queue whose data are then returned on the \ac{CC} interface. During execution of
 this command, the controller sends multiple read requests to the read buffer that are routed from
 the CQ interface through the \verb|CQ Metadata Extractor| to the header FIFO. These requests can
 request data chunks as large as the current \ac{MRRS} setting (up to 4~KiB) but the
 \verb|PCIe Read Responder| slices each of these requests into 128~B chunks as previously described.
 
-The completion of a command happens in the same was as in case of the read command where the NVMe
+The completion of a command happens in the same way as in case of the read command where the NVMe
 controller writes a \ac{CQE} into the Completion queue which is then detected by the
-\verb|CQE Processor| and its status returned to the \verb|Operation control|\footnotemark. The status is also
-signalized to on the \verb|Operation status| interface with the same status codes as described
-in~\cref{tab:op_stat_codes}.
+\verb|CQE Processor| and its status returned to the \verb|Operation control|\footnotemark. The
+status is also signalized on the \verb|Operation status| interface with the same status codes as
+described in~\cref{tab:op_stat_codes}.
 
 \footnotetext{The flushing operation after a write has not been implemented because this thesis only
 demonstrates the concept of the shared access between a CPU and an FPGA accelerator without focusing
-on data race. However, the operation can be easily implemented by extending SQE format generation in
-SQ Cmd Dispatcher component and by extending the state machine in the Operation control component.}
+on data race. However, the operation can be implemented by extending SQE format generation in SQ Cmd
+Dispatcher component and by extending the state machine in the Operation control component.}
 
 \chapter{Filesystem integration}
 
 The NVMe userspace driver provided within the SPDK framework\cite{spdk_usp_drivers} with its API
 disposes of all necessary functions for the NVMe device configuration and status
-management\footnotemark. The API also provides functions, like ccc and mmm that can submit
-read/write NVMe commands and operate on the raw data stored on the \ac{NVM}. However, operation on
-the raw sectors of \acp{LBA} cannot be easily used in any OS since it introduces a large amount of
-device-specific code. This thesis aims to share a running (but also standardized) filesystem on the
-NVMe drive between a host and an FPGA accelerator.
+management\footnotemark. The API also provides functions, like \verb|spdk_nvme_ns_cmd_read| and
+\verb|spdk_nvme_ns_cmd_write| that can submit read/write NVMe commands and operate on the raw data
+stored on the \ac{NVM}. However, operation on the raw sectors of \acp{LBA} cannot be easily used in
+any OS since it introduces a large amount of device-specific code. This thesis aims to share a
+running (but also standardized) filesystem on the NVMe drive between a host and an FPGA accelerator.
+
+\footnotetext{The driver does not use interrupts since these cannot be routed to the userspace and
+they introduce a significant overhead due to forced context switches. Therefore, they have been
+disabled for the NVMe drive and for the FPGA accelerator as well. The NVMe standard supports wide
+range of interrupt types used in the PCIe. These interrupts can be used to notify the requester that
+new entries arrived to the completion queue. The SPDK framework incorporates polling to wait for
+devices which helps to reduce latency for the cost of putting some load to the CPU running polling
+loops\cite{spdk_usp_drivers}.}
 
 The Linux-based operating systems distinguishes three types of devices: \emph{character (char)}
 devices that operate with their data in streams (like a sound card or serial console),
@@ -507,10 +535,10 @@ the char and block devices are available as file entries in the operating system
 in the \verb|/dev| directory), although the block devices are the only ones available to be read
 back and forth as a normal file (meaning the users are able to perform seek on them). There can be
 exceptions to some char devices but they generally prohibit to perform a seek to their device files.
-The block devices are the only one that are available to run a file system\cite{linux_drivers}
-because they provide an abstraction over multiple different storage hardware by providing a unified
-set of operations\cite{spdk_paper}. The Linux filesystem drivers then attach to specific block
-devices.
+The block devices are the only ones that are available to run a file system\cite{linux_drivers}
+because they provide an abstraction over multiple different storage hardware by disposing of a
+unified set of operations\cite{spdk_paper}. The Linux filesystem drivers then attach to specific
+block devices.
 
 An interesting case occurs when a userspace framework is used to operate on a block device such as
 the SPDK application operating on an NVMe drive in case of this thesis. A filesystem can be mounted
@@ -518,15 +546,15 @@ only if it is visible by the kernel which is where \ac{ublk} comes into scene. T
 high-performance driver that allows to attach a userspace application (called \emph{ublk server}) as
 a kernel-based bdev. The \ac{ublk} framework profits from \verb|io_uring| as a recent addition to
 the Linux kernel that introduces a fast way of userspace-kernel communication which is fully
-asynchronous and utilizes a pair of queues sames to the ones specified in the NVMe (that is
+asynchronous and utilizes a pair of queues same to the ones specified in the NVMe (that is
 \emph{Submission queue} and \emph{Completion queue}). This way allows to submit multiple requests to
-the kernel or vice versa and then just wait for the completion of such batch (the traditional way
-uses system calls that are blocking and only one can be active at a time)\cite{io_uring_whitepaper}.
-The scheme of how this is configured is depicted in fig. XXX. The ublk server asks the ublk driver
-to create one or more ublk devices (located in \verb|/dev/ublkb*|). One of such device is then
-formatted as a filesystem and mounted. Every operation of such filesystem (like read, write or
-flush) is forwarded through the ublk driver back to the server where it is processed and
-completed\cite{spdk_ublk,ublk_linux_kern_doc}.
+the kernel or vice versa and then just wait for the completion of such batch (works as a part of the
+asynchronous I/O contrary to the traditional way which uses system calls that are blocking and only
+one can be active at a time)\cite{io_uring_whitepaper}. The scheme of how this is configured is
+depicted in fig. XXX. The ublk server asks the ublk driver to create one or more ublk devices
+(located in \verb|/dev/ublkb*|). One device of that sort is then formatted as a filesystem and mounted.
+Every operation on this filesystem (like read, write or flush) is forwarded through the ublk driver
+back to the server where it is processed and completed\cite{spdk_ublk,ublk_linux_kern_doc}.
 
 The \ac{exFAT} filesystem has been chosen for the demonstration because of its ease of
 implementation, the ability of storing very large files and the support of very large storages. This
@@ -551,23 +579,16 @@ important features of the standard are the following :
     maximum capacity of 512~TB given the maximum cluster size of 32~MB\cite{exfat_spec}.
 \end{itemize}
 
-\footnotetext{The driver does not use interrupts since these cannot be routed to the userspace and
-they introduce a significant overhead due to forced context switches. Therefore, they have been
-disabled for the NVMe drive and for the FPGA accelerator as well. The NVMe standard supports wide
-range of interrupt types used in the PCIe. These interrupts can be used to notify the requester that
-new entries arrived to the completion queue. The SPDK framework incorporates polling to wait for
-devices which helps to reduce latency for the cost of putting some load to the CPU running polling
-loops\cite{spdk_usp_drivers}.}
-
 \chapter{Evaluation}
 
-The evaluation was carried out on the mentioned \emph{Alveo U55C} acceleration card\cite{alveo_u55c}
-using Vivado 2025.1 for synthesis. For software demonstration, a custom server has been used running
-AMD Threadripper PRO 5955WX with 16 cores at 4.579~GHz as the CPU. The system disposes of 128~GB of
-RAM and it allows up to 7 Gen4x16 PCIe cards to be simultaneously connected. Each of the PCIe
-connectors also supports bifurcation. The acceleration card has been configured as \emph{Gen4x8
-Endpoint} with 2 Functions. The NVMe device tested in this work has been the SK Hynx PC611 with 512~GB
-stated capacity, running as Gen3x4 Endpoint and conforming the NVMe v1.3 specification.
+The evaluation was carried out on the mentioned \emph{AMD Alveo U55C} acceleration
+card\cite{alveo_u55c} using Vivado 2025.1 for synthesis. For software demonstration, a custom server
+has been used running AMD Threadripper PRO 5955WX with 16 cores at 4.579~GHz as the CPU. The system
+disposes of 128~GB of RAM and it allows up to 7 Gen4x16 PCIe cards to be simultaneously connected.
+Each of the PCIe connectors also supports bifurcation. The acceleration card has been configured as
+\emph{Gen4x8 Endpoint} with 2 Functions. The NVMe device tested in this work has been the \emph{SK
+Hynx PC611} with 512~GB stated capacity, running as Gen3x4 Endpoint and conforming to the NVMe v1.3
+specification.
 
 \section{Resource consumption}
 
@@ -629,8 +650,8 @@ component that stores maximum, minimum and a histogram of captured values. The d
 only 22 bits of a timestamp value from the latency meter since this should be sufficient according
 to~\cite{spdk_paper,nvme_latency}. There is a detection of the timestamp
 overflow that would mess with the values already stored in the data logger in which case the whole
-measurement have to be repeated. The histogram consists of 32768~bins that give it a resolution of
-512~ns. The measurement parameters were varied based on multiple parameters:
+measurement have to be repeated. The histogram consists of $2^{15}$~bins that give it a resolution of
+512~ns. The measurement parameters were varied based on multiple variables:
 
 \begin{itemize}
     \item Operation type: read or write
@@ -685,7 +706,7 @@ observed any substantial difference between access patterns.
 \end{table}
 
 The write operation has been observed to be visibly faster than the read operation. The cause of
-this is twofold: Firstly, the measurement does not perform \verb|FLUSH| operation after a write is
+this may be twofold: Firstly, the measurement does not perform \verb|FLUSH| operation after a write is
 issued and, secondly, the tested NVMe drive contains an on board cache for data that are about to be
 stored to the \ac{NVM}. Storing all of the copied data on device's cache is already considered as a
 completed operation which results in a faster completion receive and lower latency.
@@ -693,9 +714,8 @@ completed operation which results in a faster completion receive and lower laten
 \section{Application usage}
 \label{sect:app_usage}
 
-This section describes how the application that provides shared CPU-FPGA filesystem access should be
-used. This presumes that the user followed the installation guide in~\cref{chap:spdk_conf}. After
-both, the FPGA accelerator and the NVMe drive are unbound, the devices are ready to run the
-applications. The
+This section describes how the application \verb|fpga_zero_copy.c| that provides shared CPU-FPGA
+filesystem access should be used. This presumes that the user finished the installation guide
+in~\cref{chap:spdk_conf}.
 
 % TODO: Describe testing using iuventus_test.py script and enabling the ublk device
