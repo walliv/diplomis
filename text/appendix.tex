@@ -40,7 +40,7 @@ reconfiguration.
 The \emph{ndk-sw} repository\cite{ndk_sw_github} should be cloned and entered. The documentation
 provides a list of steps for installing the \verb|nfb-framework| package. The Python modules should
 be installed inside a virtual environment. The user can use a starter YAML file located in the
-\verb|apps/iuventus/sw/| directory in the NDK-FPGA repository. RHEL-based systems allow to download
+\path{apps/iuventus/sw/} directory in the NDK-FPGA repository. RHEL-based systems allow to download
 and install prebuilt packages without the need to perform the following steps:
 
 \begin{lstlisting}[caption={Installing the NDK-SW package and Python modules}]
@@ -95,13 +95,13 @@ $ make
 $ ls -l
 \end{lstlisting}
 
-The synthesis reports are available in \verb|*_synth.pow|, \verb|*_synth.tim| and
-\verb|*_synth.util| files whereas the reports from implementation in \verb|*_par.pow|,
+The synthesis reports are available in \verb|*_synth.drc|, \verb|*_synth.tim| and
+\verb|*_synth.util| files whereas the reports from implementation in \verb|*_par.drc|,
 \verb|*_par.tim| and \verb|*_par.util| files. The generated DeviceTree can be seen in
-\verb|*.netcope_tmp/DeviceTree.dts| file There is the Vivado-specific bitstream \verb|*.bit| file
-and its NDK-FPGA-specific option in the \verb|*.nfw| file. The \verb|*.nfw| file is basically an
-archive containing the \verb|*.bit| bitstream and the DeviceTree file used by the NDK-SW programming
-tool for protection to check that the bitstream gets programmed into a correct hardware.
+\verb|*.netcope_tmp/DeviceTree.dts| file. There is the Vivado-specific bitstream as the \verb|*.bit|
+file and its NDK-FPGA-specific option in the \verb|*.nfw| file. The \verb|*.nfw| file is basically
+an archive containing the \verb|*.bit| bitstream and the DeviceTree file used by the NDK-SW
+programming tool for protection to check that the bitstream gets programmed into a correct hardware.
 
 The NDK-FPGA framework contains necessary Python sources to interact with different hardware
 components using the Python API installed as a part of NDK-SW. It is recommended to install these
@@ -167,7 +167,12 @@ described in~\cite{vivado_remote_hw_server}. The remote server needs at least th
 edition installed. The Hardware Manager needs to be opened on the local machine but the
 \verb|Auto Connect| feature will not work this time and the remote server needs to be explicitly
 specified as a target through the \verb|Open New Target...| option. Notice that the remote and local
-installations of the Vivado environment need to be of the same version.
+installations of the Vivado environment need to be of the same version. If your card is already
+running a design, connecting to the \verb|hw_server| is necessary if you are using \ac{ILA} cores in
+your design which is also the case of this thesis to observe received data that have been read from
+the NVMe device. To observe signals on the ILA, two files have to be supplied to the opened target
+where the first is the configuration bitstream (\verb|*.bit|) and the second is the file containing
+probe descriptions (\verb|*.ltx|).
 
 \begin{lstlisting}[caption={Running hardware server on the remote machine}]
 # This will run the hardware server in the background listening on port 3121
@@ -349,7 +354,7 @@ $ make
 \end{lstlisting}
 
 The build of the SPDK application will take some time ending with all executables stored in the
-\verb|build/| directory. There are several tools that can be tried to verify that an NVMe is
+\path{build/} directory. There are several tools that can be tried to verify that an NVMe is
 connected.
 
 \begin{lstlisting}[caption={Testing NVMe drive using native SPDK tools}]
@@ -497,6 +502,8 @@ listed in \cref{tab:iuventus_reg_map}.
 83 & 332 & 14C & CNTR & SQ Disp Read Bytes L & R (Strobe) & W & 32 & The amount of read bytes from the submission queue \\ \hline
 84 & 336 & 150 & CNTR & SQ Disp Read Bytes H & R (Strobe) & W & 32 &  \\ \hline
 85 & 340 & 154 & REG & Tag FIFO Status & R & W & 12 & The amount of free tags in the FIFO \\ \hline
+86 & 344 & 158 & CNTR & NVME FLUSH Cmds L & R (Strobe) & W & 32 & The amount of dispatched FLUSH NVMe commands \\ \hline
+87 & 348 & 15C & CNTR & NVME FLUSH Cmds H & R (Strobe) & W & 32 &  \\ \hline
 \end{longtable}
 \end{landscape}
 

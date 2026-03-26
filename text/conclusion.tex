@@ -2,4 +2,39 @@
 \phantomsection
 \addcontentsline{toc}{chapter}{Conclusion}
 
-Thesis conclusion.
+This thesis introduced the solution for efficient, directly addressable access to the NVMe from the
+FPGA accelerator as an alternative to traditional staging of data in the host memory. The
+proposed implementation demonstrated shared CPU-FPGA filesystem access to an NVMe device using PCI
+Express peer-to-peer communication, with the CPU primarily responsible for configuration and
+standard filesystem operation. The core objective was to reduce avoidable software overhead that the
+copying of data involves as well as the NVMe command creation and memory-bus pressure while
+preserving practical integration with a Linux software stack.
+
+To achieve this, the work combined hardware and software co-design. On the hardware side, the DMA
+Iuventus IP core was developed and integrated into the FPGA design to process NVMe-related PCIe
+traffic, maintain queue state, and serve requests from accelerator-mapped queue and buffer
+regions. On the software side, SPDK with Linux ublk was used to create a userspace control path to
+a mountable block device, enabling validation with a standard filesystem workflow instead of only
+raw block-level testing. This architecture established an operational path for host-bypassing data
+exchange between the FPGA and NVMe controller while preserving host access to shared storage.
+
+The implementation was validated on the AMD-based computer architecture equipped with the \emph{AMD
+Alveo U55C} platform and an NVMe SSD. The reported measurements and functional tests confirmed
+correct operation of command submission and completion handling, successful read/write behavior for
+both the CPU and accelerator access paths, and latency characteristics consistent with expected NVMe
+operation. Resource utilization and timing results showed that the proposed hardware is
+implementable on a practical data-center accelerator.
+
+At the same time, the solution has limitations emerging from its current scope. The presented setup
+was evaluated on a specific hardware and firmware environment. The implementation choices (like
+IOMMU settings or only one flying command from the DMA Iuventus module) prioritize functionality and
+experimental control over multi-tenant or high throughput use-cases.
+
+Future work can therefore focus on strengthening deployability and scaling. Promising directions
+include operation with enabled IOMMU where \verb|vfio| driver can be used to access the unbound
+devices for non-superusers, extension toward more parallel queue configurations including queues
+with larger size that would allow more flying commands from the hardware, or other models of NVMe
+drives. The testbed used in this thesis provided 4 different SSDs but only some of them worked at a
+time in the communication with the hardware (only 1 at the time when this thesis was written).
+Although all of these NVMe drives were normally operable from the host system, the FPGA access to
+all of them was not possible all of the time. The cause of this remains largely undiscovered.

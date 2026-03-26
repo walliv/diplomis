@@ -1,4 +1,5 @@
 \chapter{DMA Iuventus}
+\label{chap:dma_iuventus}
 
 Since this thesis proposes a solution that can access the filesystem located on an NVMe
 device shared between the host OS and an FPGA accelerator, a specific IP core is needed on
@@ -9,7 +10,10 @@ device\cite{iuventus_github}. The term "DMA" has been retained to highlight the 
 direct copying of data to the adjacent storage without a host CPU facilitating such transfers (this
 transfer in a \ac{P2P} manner is sometimes called \emph{Host bypassing}). This IP sits in the FPGA on the
 integrated block for PCIe to accept NVMe-specific traffic alongside logic that
-processes transactions to \ac{C/S} registers.
+processes transactions to \ac{C/S} registers\footnotemark.
+
+\footnotetext{The source files of the module are available in the cited repository under the
+    \path{comp/dma/dma_iuventus} directory}
 
 \section{TLP Headers}
 
@@ -21,9 +25,9 @@ two bottom bits are reserved\footnotemark. For \acp{MWr}, the \emph{Dword count}
 size of the payload following the header, whereas, for \acp{MRd}, it specifies the required amount
 of data that a Completer needs to send in its Completion. The type of a request is defined in the
 \emph{Req type} field. The \emph{Func} field informs the PCIe IP which Function generated the
-request (more on that later)\cite{pcie_amd_ip}. The last used field is the \emph{NoSnoop} bit, which instructs the
-host CPU that the underlying address space targeted by the transaction does not require
-hardware-enforced cache coherency\cite{pcie_spec}. This means that the address space is not
+request (more on that later)\cite{pcie_amd_ip}. The last used field is the \emph{NoSnoop} bit, which
+instructs the host CPU that the underlying address space targeted by the transaction does not
+require hardware-enforced cache coherency\cite{pcie_spec}. This means that the address space is not
 shared by any other device in the system. The \ac{RQ} interface is used to dispatch \ac{SQTDBL} and
 \ac{CQHDBL} updates to the NVMe registers.
 
@@ -219,8 +223,6 @@ attached to it. This information is then copied to the \emph{Identify Controller
 
 \footnotetext{Remember that the Queue ID is used in the \ac{CQE} as a part of a command's unique
     identifier since multiple I/O Submission queues can share one I/O Completion queue}
-
-% TODO : Mention that interrupts are disabled
 
 \section{Command submission}
 
@@ -523,6 +525,7 @@ on data race. However, the operation can be implemented by extending SQE format 
 Dispatcher component and by extending the state machine in the Operation control component.}
 
 \chapter{Filesystem integration}
+\label{chap:filesystem}
 
 The NVMe userspace driver provided within the SPDK framework\cite{spdk_usp_drivers} with its API
 provides all necessary functions for NVMe device configuration and status
@@ -601,6 +604,7 @@ important features of the standard are the following :
 \end{itemize}
 
 \chapter{Evaluation}
+\label{chap:eval}
 
 The evaluation was carried out on the previously mentioned \emph{AMD Alveo U55C} acceleration
 card\cite{alveo_u55c} using Vivado 2025.1 for synthesis. For software demonstration, a custom server
@@ -634,7 +638,7 @@ the DMA module and the PCIe IP, the test design contains several additional comp
     the DMA module.
 \end{itemize}
 
-The design meets timing requirements with 0.060~ns WNS and 0.010~ns WHS.
+The design meets timing requirements with 0.079~ns WNS and 0.010~ns WHS.
 
 \begin{table}[!ht]
     \centering
@@ -735,8 +739,362 @@ completed operation which results in a faster completion receive and lower laten
 \section{Application usage}
 \label{sect:app_usage}
 
-This section describes how the application \verb|fpga_zero_copy.c| that provides shared CPU-FPGA
-filesystem access should be used. This presumes that the user finished the installation guide
-in~\cref{chap:spdk_conf}.
+This section describes how the application \verb|fpga_zero_copy| that provides shared CPU-FPGA
+filesystem access should be used. The source files for this are located in the SPDK repository under
+\path{examples/nvme/fpga_zero_copy}. The guide presumes that the user finished the installation guide
+in \cref{chap:spdk_conf} and the executables are built in the \path{build/} directory. The
+installation guide describes the unbinding of the NVMe drive on the \ac{BDF} \verb|0000:61:00.0| and
+the FPGA acceleration cards's function~1 on \verb|0000:41:00.1|. These devices have the following
+\ac{BAR} configuration:
 
-% TODO: Describe testing using iuventus_test.py script and enabling the ublk device
+\begin{lstlisting}[caption={Looking for BAR configuration of unbound devices}]
+$ sudo lspci -v -s 0000:61:00.0 ; sudo lspci -v -s 0000:41:00.1
+61:00.0 Non-Volatile memory controller: SK hynix PC611 NVMe Solid State Drive (prog-if 02 [NVM Express])
+	Subsystem: SK hynix PC611 NVMe Solid State Drive
+	Control: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin A routed to IRQ 97
+	Region 0: Memory at b7200000 (64-bit, non-prefetchable) [size=16K]
+	Region 2: Memory at b7205000 (32-bit, non-prefetchable) [size=4K]
+	Region 3: Memory at b7204000 (32-bit, non-prefetchable) [size=4K]
+
+    ... some output omitted ...
+
+	Kernel driver in use: uio_pci_generic
+	Kernel modules: nvme
+
+41:00.1 Memory controller: Cesnet, z.s.p.o. Device c020
+	Subsystem: Cesnet, z.s.p.o. Device c020
+	Control: I/O- Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Region 0: Memory at b5060000 (32-bit, non-prefetchable) [size=128K]
+	Region 1: Memory at b5040000 (32-bit, non-prefetchable) [size=128K]
+	Region 2: Memory at b5020000 (32-bit, non-prefetchable) [size=128K]
+	Region 3: Memory at b5000000 (32-bit, non-prefetchable) [size=128K]
+
+    ... some output omitted ...
+
+	Kernel driver in use: uio_pci_generic
+\end{lstlisting}
+
+The devices listed are correctly configured which can be seen by enabled memory transactions
+(attribute \verb|Mem+|), permitted bus-mastering (attribute \verb|BusMaster+|) and disabled
+pin-based interrupts (attribute \verb|DisINTx+|). The BAR configurations are marked as
+\verb|Region N| where the FPGA accelerator contains the previously initialized 4 \acp{BAR} and the
+NVMe drive the needed BAR 0 (other BARs contain vendor-specific registers). The devices are also
+correctly bound to the \verb|uio_pci_generic| driver as present in the \verb|Kernel driver in use:|
+field.
+
+The \verb|fpga_zero_copy| application is built in SPDK under the \path{build/examples} directory and
+executed in the following way (the size of a queue is just a placeholder since the DMA Iuventus core
+allows only one flying request at a time):
+
+\begin{lstlisting}[caption={Executing the SPDK application}]
+# Running the application on the specified SSD and on the implicit NFB device (index 0)
+$ sudo ./fpga_zero_copy -t 'traddr:0000:61:00.0' -q8
+Initializing NVMe Controller for device 0000:61:00.0
+Probing 0000:23:00.0 ...
+Probing 0000:2d:00.0 ...
+Probing 0000:61:00.0 ...
+Probing 0000:62:00.0 ...
+Attaching to 0000:61:00.0 ...
+Controller options:
+	Number of IO queues:   16
+	Size of IO queues:     8
+	IO queue requests:     8
+	NS 1 size:             512GB
+	NS number of sectors:  1000215216
+	NS sector size:        512B
+	LBA Mask:              x1ff (511)
+Controller CSTS register:
+	CSTS.RDY: 1
+	CSTS.CFS: 0
+	CSTS.SHST: 0
+	CSTS.NSSRO: 0
+	CSTS.PS: 0
+Physical address of NVME BAR0: 0xb7200000
+Doorbell stride: 0
+PCIE domain initialization complete
+FPGA PCIe device context:
+	SQ VADDR: 0x201080088000
+	SQ PADDR: b5060000
+	SQ size:  131072 bytes
+	CQ VADDR: 0x2010800a8000
+	CQ PADDR: b5040000
+	CQ size:  131072 bytes
+	WRBUFF VADDR: 0x2010800c8000
+	WRBUFF PADDR: b5020000
+	WRBUFF size:  131072 bytes
+	RDBUFF VADDR: 0x2010800e8000
+	RDBUFF PADDR: b5000000
+	RDBUFF size:  131072 bytes
+Default queue pair options:
+IO queue size: 8
+IO queue requests: 8
+Allocate qid 1
+HW CQ allocated!
+HW SQ allocated!
+	SQTDBL physical address: 0xb7201008
+	CQHDBL physical address: 0xb720100c
+Queues allocated.
+Write PRP List (vaddr: 0x20007feeb000, paddr: 0x1dffeeb000):
+    ... list entries omitted ...
+Read PRP List (vaddr: 0x20007fee7000, paddr: 0x1dffee7000):
+    ... list entries omitted ...
+Host filesystem bdev registered as: /dev/ublkb0
+  To format: mkfs.ext4 /dev/ublkb0
+  To mount:  mount /dev/ublkb0 /mnt/nvme
+Initialization complete. Starting main loop.
+
+# The app then blocks the terminal when the main loop starts and only waits for SIGINT signal (normally bound to Ctrl-C)
+\end{lstlisting}
+
+The \verb|fpga_zero_copy| puts out valuable information about the configured parameters. It probes
+all unbound NVMe drives in the system but attaches only our chosen one. The BAR addresses of the
+NVMe as well as of the FPGA accelerator. The values of BARs are assigned to the FPGA context as
+mentioned previously in the implementation chapter, i.e. BAR~0 address to the Submission Queue,
+BAR~1 address to the Completion Queue, BAR~2 address for the write buffer and BAR~3 address for the
+read buffer. The assignment is followed by allocating \ac{QID} of 1 for the queues in the hardware
+and attaching these queues to the NVMe controller. The doorbell register offsets needed to be
+calculated from the offset in BAR~0 of the NVMe combined with \emph{Doorbell stride}. These offsets
+are also written to the FPGA context, meaning into the configuration registers of the DMA Iuventus
+module. The PRP Lists are initialized afterwards and their physical addresses are published to the
+FPGA context as well. Lastly, the ublk device is created as mentioned in the output and published as
+\path{/dev/ublkb0} with examples of how to format and mount it.
+
+The device context can be verified by separate tools available in the downloaded NDK-FPGA
+repository. These are located in the \path{apps/iuventus/sw} directory.
+
+\begin{lstlisting}[caption={Verifying NFB device context}]
+(my-python-env) $ ./iuventus_reg_status.py
+ctrl_reg              : ENABLE: 1
+                        |  RPT_UPD_EN: 1
+
+status_reg            : RDY: 1
+                        | RST_DONE: 1
+                        | TAG_INIT_DONE: 1
+
+sqtdbl                : 0		(0x0)
+sqhdbl                : 0		(0x0)
+cqhdbl                : 0		(0x0)
+dbl_mask              : 0x7	(7)
+sqtdbl_baddr          : 0xb7201008
+cqhdbl_baddr          : 0xb720100c
+rdbuff_baddr          : 0xb5000000
+rdbuff_prp_list_ptr   : 0x1dffee7000
+wrbuff_baddr          : 0xb5020000
+wrbuff_prp_list_ptr   : 0x1dffeeb000
+last_cq_entry         : ('cmd_specific: 0 (0x0), rsv1: 0 (0x0), sqhdbl: 0 (0x0), sq_id: 0 (0x0), '
+                            'cmd_id: 0 (0x0), phase_tag: 0 (0x0), stat_code: 0 (0x0), stat_code_type: 0 '
+                            '(0x0), rsv2: 0 (0x0), more: 0 (0x0), do_not_retry: 0 (0x0)')
+sqes_dispatched       : 0
+cqes_processed        : 0
+pcie_rds              : 0
+pcie_rds_bytes        : 0
+pcie_wrs              : 8
+pcie_wrs_bytes        : 8
+sq_pcie_rds           : 0
+sq_pcie_rds_bytes     : 0
+lba_mask              : 511		(0x1ff)
+succ_cpls             : 0
+unsucc_cpls           : 0
+err_mask              : 0
+rdbuff_pcie_rds       : 0
+rdbuff_pcie_rds_bytes : 0
+wrbuff_pcie_wrs       : 0
+wrbuff_pcie_wrs_bytes : 0
+lba_space_size        : 0x3b9e12b0	 (1000215216 blocks = 476.94 GB)
+cq_pcie_wrs           : 8
+cq_pcie_wrs_bytes     : 8
+cqhdbl_reg_upd        : 0
+cqhdbl_rpt_upd        : 15
+sqtdbl_reg_upd        : 0
+sqtdbl_rpt_upd        : 15
+meta_ptr              : 0x0
+nvme_rd_cmd_bytes     : 0
+nvme_wr_cmd_bytes     : 0
+wrbuff_usr_rds        : 0
+wrbuff_usr_rds_bytes  : 0
+rdbuff_disp_rds       : 0
+rdbuff_disp_rds_bytes : 0
+sq_disp_rds           : 0
+sq_disp_rds_bytes     : 0
+tag_fifo_status       : 2048/2048
+\end{lstlisting}
+
+The \verb|iuventus_reg_status| tool actually prints all currently stored values in the configuration
+registers of the DMA Iuventus module as defined in \cref{chap:iuventus_reg_map}. We see that FPGA
+context has been written correctly into all \verb|*_baddr| as well as \verb|*_prp_list_ptr| fields.
+The component is now able to process requests to the NVMe drive which is signalized by \verb|ENABLE|
+and \verb|RDY| fields both set to 1. The capacity of the namespace is stored in the
+\verb|lba_space_size| while the maximum amount of data that can be transfered within one command
+(i.e. the value of \ac{MDTS} field of the \emph{Identify controller} data structure) is copied to
+the \verb|lba_mask| field. The core has not processed any commands yet. First we format the created
+ublk device.%\footnotemark.
+
+% \footnotetext{Sometimes, the format need to be run multiple times in order to succeed since the ublk
+% driver occasionally struggles with the amount of sudden writes/read when the operation is done (as
+% can be seen from the kernel log when calling \emph{dmesg}). A solution is the matter of future
+% work.}
+
+\begin{lstlisting}[caption={Formatting the created ublk device}]
+# The block device can be formatted
+$ sudo mkfs.exfat /dev/ublkb0
+exfatprogs version : 1.3.2
+Creating exFAT filesystem(/dev/ublkb0, cluster size=131072)
+
+Writing volume boot record: done
+Writing backup volume boot record: done
+Fat table creation: done
+Allocation bitmap creation: done
+Upcase table creation: done
+Writing root directory entry: done
+Synchronizing...
+
+exFAT format complete!
+
+# The formatted drive can then by verified (the most important are the Root entries)
+$ sudo dump.exfat /dev/ublkb0
+exfatprogs version : 1.3.2
+-------------- Dump Boot sector region --------------
+Volume Length(sectors):                  1000215216
+FAT Offset(sector offset):               2048
+FAT Length(sectors):                     30524
+Cluster Heap Offset (sector offset):     32768
+Cluster Count:                           3906962
+Root Cluster (cluster offset):           7
+Volume Serial:                           0xfdc7fd63
+Bytes per Sector:                        512
+Sectors per Cluster:                     256
+
+----------------- Dump Root entries -----------------
+Volume label entry position:             0x10a0000
+Volume label character count:            0
+Volume label:
+Upcase table entry position:             0x10a0060
+Upcase table start cluster:              6
+Upcase table size:                       5836
+Bitmap entry position:                   0x10a0040
+Bitmap start cluster:                    2
+Bitmap size:                             488371
+
+---------------- Show the statistics ----------------
+Cluster size:                            131072
+Total Clusters:                          3906962
+Free Clusters:                           3906956
+\end{lstlisting}
+
+The system can now be mounted and operated as a normally attached drive. To make the created files
+permanently stored is made by running the \verb|sync| command which not only flushes the cache on
+the NVMe drive but also the catche maintained by the filesystem driver in the kernel.
+
+\begin{lstlisting}[caption={Formatting the created ublk device}]
+# Mounting with relaxed privileges for the non-superuser (uid and gid numbers can differ)
+$ sudo mount -o uid=1000,gid=1000,umask=000 /dev/ublkb0 /mnt/nvmexp/
+
+# Create some experimentary files
+$ cd /mnt/nvmexp
+$ echo "NCT rules!" > tst1.txt
+$ echo "Heidelberg is a nice town." > tst2.txt
+$ mkdir my_dir
+$ echo "Hidden file in one directory" > my_dir/tst1.txt
+
+# Creating large contiguous files is generally problematic for exFAT but this may work
+$ dd if=/dev/zero of=./large_file.txt bs=1M count=1
+
+# Permanently store the written files on the media
+$ sync /dev/ublkb0
+\end{lstlisting}
+
+We can return back to the software tools in the NDK-FPGA repository. Besides the
+\verb|iuventus_reg_status.py| there is another app as a placeholder for a custom logic in the FPGA
+that creates requests to the NVMe drive\footnotemark. Be careful with writing operations when you
+have a mounted filesystem or other useful files on the NVMe drive since you can corrupt them.
+
+
+\footnotetext{For more information, see the help of the application that is printed by the
+-h switch of the application}
+
+\begin{lstlisting}[caption={Creating requests from the FPGA}]
+# Reading one sector (0-based value) from the LBA 0
+(my-python-env) $ ./iuventus_rw_test.py -r 0 0
+
+# Writing 256 sectors to LBA 475
+(my-python-env) $ ./iuventus_rw_test.py -w 475 255
+
+# Single latency measurement of write operation with 10000 repetitions, random addressing and 46 sectors in size
+(my-python-env) $ ./iuventus_rw_test.py -l wr 10000 rand 45
+
+# Measuring latency with parameter sweep as measured in the previous section and writing these results into a graph
+(my-python-env) $ ./iuventus_rw_test.py -mp
+\end{lstlisting}
+
+The internal status of the DMA Iuventus can be checked every time by the
+\verb|iuventus_reg_status.py| tool.
+
+\begin{lstlisting}[caption={Example of DMA Iuventus status}]
+(my-python-env) $ ./iuventus_reg_status.py
+ctrl_reg              : ENABLE: 1
+			|  RPT_UPD_EN: 1
+
+status_reg            : RDY: 1
+			| RST_DONE: 1
+			| TAG_INIT_DONE: 1
+
+sqtdbl                : 0		(0x0)
+sqhdbl                : 0		(0x0)
+cqhdbl                : 0		(0x0)
+dbl_mask              : 0x7	(7)
+sqtdbl_baddr          : 0xb7201008
+cqhdbl_baddr          : 0xb720100c
+rdbuff_baddr          : 0xb5000000
+rdbuff_prp_list_ptr   : 0x1dffee7000
+wrbuff_baddr          : 0xb5020000
+wrbuff_prp_list_ptr   : 0x1dffeeb000
+last_cq_entry         : ('cmd_specific: 0 (0x0), rsv1: 0 (0x0), sqhdbl: 0 (0x0), sq_id: 1 (0x1), '
+                         'cmd_id: 132 (0x84), phase_tag: 0 (0x0), stat_code: 0 (0x0), stat_code_type: '
+                         '0 (0x0), rsv2: 0 (0x0), more: 0 (0x0), do_not_retry: 0 (0x0)')
+sqes_dispatched       : 80000
+cqes_processed        : 80000
+pcie_rds              : 1040000
+pcie_rds_bytes        : 250880000
+pcie_wrs              : 11280008
+pcie_wrs_bytes        : 718080008
+sq_pcie_rds           : 80000
+sq_pcie_rds_bytes     : 5120000
+lba_mask              : 511		(0x1ff)
+succ_cpls             : 80000
+unsucc_cpls           : 0
+err_mask              : 0
+rdbuff_pcie_rds       : 960000
+rdbuff_pcie_rds_bytes : 245760000
+wrbuff_pcie_wrs       : 11200000
+wrbuff_pcie_wrs_bytes : 716800000
+lba_space_size        : 0x3b9e12b0	 (1000215216 blocks = 476.94 GB)
+cq_pcie_wrs           : 80008
+cq_pcie_wrs_bytes     : 1280008
+cqhdbl_reg_upd        : 80000
+cqhdbl_rpt_upd        : 1047
+sqtdbl_reg_upd        : 80000
+sqtdbl_rpt_upd        : 1047
+meta_ptr              : 0x0
+nvme_rd_cmd_bytes     : 716800000
+nvme_wr_cmd_bytes     : 245760000
+wrbuff_usr_rds        : 50000
+wrbuff_usr_rds_bytes  : 716800000
+rdbuff_disp_rds       : 960000
+rdbuff_disp_rds_bytes : 245760000
+sq_disp_rds           : 80000
+sq_disp_rds_bytes     : 5120000
+tag_fifo_status       : 2048/2048
+\end{lstlisting}
+
+The transmission was successful since there are no \verb|unsucc_cpls| and no errors logged in the
+\verb|err_mask|.
+
+Before killing the running application, the block device needs to be unmounted. The
+\verb|fpga_zero_copy| application can be killed by sending the \verb|SIGINT| signal to it which is
+normally bound to Ctrl-C keybinding. This triggers a shutdown process of all devices in the chain
+with correct disabling of the DMA Iuventus module.

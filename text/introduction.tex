@@ -2,13 +2,56 @@
 \phantomsection
 \addcontentsline{toc}{chapter}{Introduction}
 
-Here comes the introduction of the thesis, for example\,\dots
+Modern datacenter workloads increasingly combine general-purpose CPUs with accelerators, while also
+requiring high-throughput and low-latency access to persistent storage. In many practical systems,
+however, accelerator-to-storage communication still relies on host memory as an intermediate staging
+area. This approach is functional, but it introduces avoidable data copies when copied from
+permanent storage, additional software overhead in case the CPU needs to copy the data itselv, and
+contention on host resources caused by the increased pressure on the memory bus. As storage
+performance and accelerator parallelism continue to grow, these inefficiencies become a significant
+system-level bottleneck.
 
-This thesis is devoted to DSP,
-especially it analyses the effect happening when the Nyquist condition for symfs is not satisfied.%
-\footnote{This sentence is only to demonstrate how abbreviations can be used and typeset.}
+This thesis addresses this problem by proposing and implementing shared CPU-FPGA filesystem access
+to an NVMe device using PCI Express peer-to-peer communication. The key idea is to let an FPGA
+accelerator exchange data with the NVMe controller directly, while the host CPU participates only
+in configuration and standard filesystem operation. To realize this concept, the work combines
+hardware and software co-design: a custom FPGA IP core handles NVMe-related PCIe traffic and queue
+maintenance on the accelerator side, and a userspace software stack configures devices and exposes a
+block-device abstraction in userspace that can be mounted by the operating system.
 
-The template is set to twoside printing by default.
-Do not be surprised that you find empty pages in your PDF.
-They are there to make the chapters and other important stuff begin on the right side when the document is printed.
-Having a~serious reason to print one-sided, please switch the option \texttt{twoside} to \texttt{oneside}!
+From the hardware perspective, the thesis begins in \cref{chap:pcie_express}, where the PCIe
+standard is introduced as a fundamental basis for the entire work. The chapter also presents the
+peer-to-peer communication concept at the core of the proposed implementation and explains how
+entities in the host system are configured and addressed. The standardized PCIe interface used in
+modern AMD FPGA accelerator cards is then described in \cref{chap:amd_pcie_ip}. The
+\emph{Integrated Block for PCIe IP} has specific requirements that must be followed when user logic
+processes PCIe traffic.
+
+The NVMe standard that forms the second key element of the implemented solution is described in
+\cref{chap:nvme_desc}. The standard has evolved rapidly since its first draft in 2011, and the
+fundamentals of its functionality are presented here. The command-queue system and controller
+initialization are explained in detail.
+
+\Cref{chap:dma_iuventus} introduces the \emph{DMA Iuventus} module, integrated with the FPGA PCIe
+endpoint interfaces. This thesis uses the NDK framework for modular FPGA design and for software
+access to the hardware. The DMA module processes request and completion traffic, updates NVMe
+doorbells, serves PCIe reads from accelerator-mapped queue and buffer regions, and submits
+read/write commands generated for accelerator requests. The design explicitly supports operation
+with queue and data structures mapped into accelerator BAR regions, enabling host-bypass movement
+between the FPGA and NVMe device.
+
+The software perspective is described in \cref{chap:filesystem}. The thesis uses SPDK with Linux
+ublk to create a path from userspace control to a mountable block device. This allows the solution
+to demonstrate shared storage access in a standard Linux environment rather than only raw
+sector-level tests. The selected \emph{exFAT} filesystem provides a simple and portable target for
+validating the correctness of read/write operations across CPU and accelerator accesses.
+
+The implemented solution is evaluated in \cref{chap:eval} on an \emph{AMD Alveo U55C} accelerator
+and an NVMe SSD in a custom server platform. Evaluation includes FPGA resource utilization and
+request-latency measurements for multiple access patterns and transfer sizes. The measurements
+confirm latency behavior consistent with typical NVMe device operation. The last section of this
+chapter describes how the provided application is run and how to access the shared filesystem.
+
+Overall, this thesis demonstrates that shared CPU-FPGA filesystem access over NVMe can be achieved
+without mandatory host-memory data staging by combining PCIe peer-to-peer transport, userspace
+device control, and an FPGA-side command-processing engine.

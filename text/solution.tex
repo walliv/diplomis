@@ -1,4 +1,5 @@
 \chapter{PCI Express}
+\label{chap:pcie_express}
 
 The \ac{PCIe} is the interconnect standard that emerged in 2003 from the \ac{PCI} standard. The
 \ac{PCIe} addressed the drawbacks of the \ac{PCI} standard, which became increasingly challenging as more
@@ -59,8 +60,6 @@ The Function is an addressable entity in the configuration space where \emph{End
 most important type of a Function. Using the term `device' in this thesis will refer to a
 general device in the PCIe topology that can contain one or more Functions (or
 Endpoints)\cite{pcie_spec}.
-
-% NOTE: Maybe mention BDF identifier if necessary
 
 Devices communicate using units called \acp{TLP}, forming a packetized transfer. Each \ac{TLP}
 contains a PCIe header used for identification followed by an optional payload. There are many
@@ -260,6 +259,7 @@ both of these functionalities have been disabled in the server's UEFI. Therefore
 communicate using physical addresses.
 
 \chapter{Integrated core for PCIe on FPGAs}
+\label{chap:amd_pcie_ip}
 
 Modern FPGAs provide hardened IP cores that implement the whole PCIe protocol stack that can be
 configured either as a Root Port (not as a \ac{rcpx} though) or an Upstream Port (mostly for
@@ -324,6 +324,7 @@ throughput when a packet ends in the first segment while the second packet can t
 second segment. This feature is called \emph{Straddling}\cite{pcie_amd_ip}.
 
 \chapter{Non-volatile Memory Express}
+\label{chap:nvme_desc}
 
 The \ac{NVMe} standard emerged in 2011 as a way to integrate non-volatile storage into the
 \ac{PCIe} domain\footnotemark. The standard emerged as a successor of \emph{SAS} and \emph{SATA}

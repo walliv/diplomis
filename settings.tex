@@ -46,7 +46,7 @@
 %  where the shortened version of the title appears as the parameter.
 %  If you do not want to shorten the title, you will have to redefine how the slide footbar
 %  is generated, see: https://bit.ly/3EJTp5A
-\title{Shared CPU FPGA Filesystem Access on fast NVMe Devices}
+\title{Shared CPU-FPGA Filesystem Access on fast NVMe Devices}
 
 %%% Study program/specialization
 \specialization{Computer Engineering} %Teleinformatika
@@ -86,19 +86,33 @@
 %%% Academic year (typically the year of solution of the thesis in the format n/n+1)
 \academicyear{2025/26}
 % Date of the defense (makes use only in the presentation slides)
-\date{15 June 2033} 
+\date{30-March-2026}
 
 %%% Place of the defense
 \city{Heidelberg}
 
 %%% Abstract
 \abstract{%
-Abstract in English.
+This thesis presents an architecture for shared CPU-FPGA filesystem access to NVMe storage using
+PCI Express peer-to-peer communication. The goal is to reduce host-memory staging and software
+overhead by enabling direct accelerator interaction with an NVMe device while preserving standard
+host-side filesystem usage. The implementation combines hardware and software components: an FPGA IP
+core (DMA Iuventus) integrated with PCIe endpoint interfaces processes NVMe-related traffic, manages
+queue interactions, and issues read/write commands; a userspace software stack based on NDK-SW and
+SPDK, together with Linux ublk, provides control-plane integration and exposes a mountable block
+device. The complete flow is validated with an exFAT filesystem and demonstrates shared access from
+both CPU and FPGA contexts. Experimental evaluation on an AMD Alveo U55C platform with an NVMe SSD
+reports resource utilization and request latency for multiple transfer sizes and access patterns. The
+results confirm functional operation of the proposed approach and show distinct latency
+characteristics for read and write paths, with sublinear read-latency growth for larger transfers.
+The work demonstrates practical feasibility of host-bypass storage acceleration and provides a
+foundation for future optimization of synchronization, throughput, and multi-device deployment
+scenarios.
 }
 
 %%% Keywords
 \keywrds{%
-PCIe, PCI Express, DMA, Direct Memory Access, host-bypassing, peer-to-peer, SPDK, NVMe, FPGA
+PCIe, DMA, host-bypassing, peer-to-peer, SPDK, NVMe, FPGA, userspace, ublk, bdev
 }
 
 %%% Thanks and acknowledgement
