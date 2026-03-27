@@ -399,35 +399,36 @@ acknowledgement happens after all internal components are initialized.
 
 The user logic requests a read from the NVMe device on the \verb|Read Request| interface
 (\Cref{fig:iuventus_block}). This is achieved by setting the amount of LBAs to read on the
-\verb|NVME_RD_REQ_LBA_NUM| and the starting address of the first LBA on \verb|NVME_RD_REQ_LBA_PTR|
-inputs. The valid request is confirmed by setting \verb|NVME_RD_REQ_VLD| to high which is
-acknowledged by the \verb|Operation control| component by asserting \verb|NVME_RD_REQ_RDY|. Because
-of the hardware constraints explained further, the amount of LBAs that can be requested by the user
-logic on the \verb|NVME_RD_REQ_LBA_NUM| is capped to 256 (i.e. this signal has a width of 8 bits).
+\verb|NVME_RD_REQ_LBA_NUM| input and the starting address of the first LBA on
+\verb|NVME_RD_REQ_LBA_PTR|. The valid request is confirmed by setting \verb|NVME_RD_REQ_VLD| to high
+which is acknowledged by the \verb|Operation control| component by asserting \verb|NVME_RD_REQ_RDY|.
+Because of the hardware constraints explained further, the amount of LBAs that can be requested by
+the user logic on the \verb|NVME_RD_REQ_LBA_NUM| is capped to 256 (i.e. this signal has a width of 8
+bits).
 
 After \verb|Operation control| acknowledges the request, it checks that the request size with its
 starting pointer does not exceed the Namespace size (thus writing beyond the namespace boundary). The
 component decides the values of \ac{PRP1} and \ac{PRP2} fields for the command based on the amount
 of memory pages that will be transferred. After that, the NVMe Read command is created in the
-\verb|SQ Cmd Dispatcher| from the provided parameters that were previously assigned to the \ac{C/S}
+\verb|SQ| \verb|Cmd| \verb|Dispatcher| from the provided parameters that were previously assigned to the \ac{C/S}
 registers. SQ Cmd Dispatcher maintains an internal FIFO of available \acp{CID} that are assigned to
 every dispatched command. Reading the status of this FIFO helps to assert the amount of flying
 commands that are currently executed/waiting on the NVMe controller. This status is available in the
 \ac{C/S} registers as the \verb|TAG FIFO Status| field.
 
-The command is then stored in the \verb|Sub Queue| located in the \verb|PCIe Transaction Buffer|.
-Originally, this buffer has been developed as a part of the DMA Calypte project\cite{calypte_github}
-to store incoming \acp{TLP} on the \ac{CQ} interface. The advantage of this buffer is the ability to
-store on a link data rate without blocking with address resolution to bytes while also able to store
-two individual packets (this stems from the two regions the CQ bus is divided into where each packet
-can address a different location). Because the reading side of the \verb|PCIe Transaction Buffer|
-has been designed to put data on a streaming bus, this component is used twice in the Iuventus
-module even when it is underutilized for the Submission queue/Read buffer side. The constraint of
-capping the amount of \acp{LBA} being requested is caused by the maximum size of the memory array in
-this component which consists of 64~BRAM blocks (since the bus is 64~bytes wide and byte-level
-addressability is needed). This array has an overall capacity of 256~KiB and it is split into two
-sectors where one is occupied by the Submission/Completion queue, while the other with the
-Read/Write buffer. The size of each sector corresponds to exactly 256~LBAs.
+The command is then stored in the \verb|Sub Queue| located in the \verb|PCIe| \verb|Transaction|
+\verb|Buffer|. Originally, this buffer has been developed as a part of the DMA Calypte
+project\cite{calypte_github} to store incoming \acp{TLP} on the \ac{CQ} interface. The advantage of
+this buffer is the ability to store on a link data rate without blocking with address resolution to
+bytes while also able to store two individual packets (this stems from the two regions the CQ bus is
+divided into where each packet can address a different location). Because the reading side of the
+\verb|PCIe Transaction Buffer| has been designed to put data on a streaming bus, this component is
+used twice in the Iuventus module even when it is underutilized for the Submission queue/Read buffer
+side. The constraint of capping the amount of \acp{LBA} being requested is caused by the maximum
+size of the memory array in this component which consists of 64~BRAM blocks (since the bus is
+64~bytes wide and byte-level addressability is needed). This array has an overall capacity of
+256~KiB and it is split into two sectors where one is occupied by the Submission/Completion queue,
+while the other with the Read/Write buffer. The size of each sector corresponds to exactly 256~LBAs.
 
 As soon as the \verb|SQ Cmd Dispatcher| creates the command and stores it in the Submission queue it
 sends an update of the \ac{SQTDBL} to the \verb|Doorbell updater|. This queues this update for a
@@ -439,15 +440,15 @@ enable submitting multiple commands and then fetching them in batch. This reduce
 the PCIe interface by lowering the amount of \acp{TLP} containing only synchronization data.
 
 The \acl{MRd} from the NVMe controller arrives on the CQ interface and is routed from the
-\verb|CQ Metadata Extractor| to the \verb|PCIe Header FIFO|. The Metadata extractor calculates the exact byte
-address and splits TLPs based on the BAR and the request type. The header FIFO receives all of the
-read requests that can target either the Read Buffer or the Submission Queue. The read requests are
-processed by the \verb|PCIe Read Responder|, which is able to read data of arbitrary length from the
-transaction buffer and put them on the \ac{CC} interface. If the size of data exceeds 128~B, the
-payload gets segmented into 128-byte chunks\footnotemark\@ which are dispatched as separate \ac{Cpl}
-\acp{TLP}, effectively utilizing the \emph{Dword count} and \emph{Byte count} fields in the \ac{CC}
-\ac{TLP} header. A single command in a queue is usually read by just one \ac{MRd} from the NVMe
-controller.
+\verb|CQ Metadata Extractor| to the \verb|PCIe Header FIFO|. The Metadata extractor calculates the
+exact byte address and splits TLPs based on the BAR and the request type. The header FIFO receives
+all of the read requests that can target either the Read Buffer or the Submission Queue. The read
+requests are processed by the \verb|PCIe Read Responder|, which is able to read data of arbitrary
+length from the transaction buffer and put them on the \ac{CC} interface. If the size of data
+exceeds 128~B, the payload gets segmented into 128-byte chunks\footnotemark\@ which are dispatched
+as separate \ac{Cpl} \acp{TLP}, effectively utilizing the \emph{Dword count} and \emph{Byte count}
+fields in the \ac{CC} \ac{TLP} header. A single command in a queue is usually read by just one
+\ac{MRd} from the NVMe controller.
 
 \footnotetext{Segmenting data into chunks of this size simplifies the design. Otherwise, the
 \ac{MPS} value would have to be consulted with the PCIe IP and the size of the segmented blocks
@@ -465,7 +466,7 @@ status is successful, the \verb|Operation control| then reads the data from the 
 thus returning them to the user logic.
 
 For software-facing reporting, the command status is returned on the
-\verb|Operation status| interface. When the \verb|OP_STAT_TYPE| signal on this interface is set
+\verb|Operation| \verb|status| interface. When the \verb|OP_STAT_TYPE| signal on this interface is set
 high, the status of the last read request is returned, otherwise, when set to low, the status
 of the last write request is returned. For the accurate distinction of status, the
 \verb|OP_STAT_CODE| signal outputs the status of the operation, which is listed
@@ -515,14 +516,12 @@ request data chunks as large as the current \ac{MRRS} setting (up to 4~KiB) but 
 
 The completion of a command happens in the same way as in case of the read command where the NVMe
 controller writes a \ac{CQE} into the Completion queue which is then detected by the
-\verb|CQE Processor| and its status returned to the \verb|Operation control|\footnotemark. The
+\verb|CQE Processor| and its status returned to the \verb|Operation control|. The
 status is also signalized on the \verb|Operation status| interface with the same status codes as
-described in~\cref{tab:op_stat_codes}.
-
-\footnotetext{The flushing operation after a write has not been implemented because this thesis only
-demonstrates the concept of the shared access between a CPU and an FPGA accelerator without focusing
-on data race. However, the operation can be implemented by extending SQE format generation in SQ Cmd
-Dispatcher component and by extending the state machine in the Operation control component.}
+described in~\cref{tab:op_stat_codes}. The flushing operation is done after a delay of approx. 1~s
+to ensure some synchronization with regards to the shared nature of the implementation presented in
+this thesis. The flushing command is dispatched from the \verb|SQ Cmd Dispatcher| as well with all
+its fields set to 0 except the index of a namespace.
 
 \chapter{Filesystem integration}
 \label{chap:filesystem}
@@ -669,7 +668,7 @@ interface by a custom component created in the \verb|USER_CORE| entity (files
 mainly of a data logger and a latency meter. The latency meter starts measuring from the dispatch of
 either a read request or a write request (remember that, at every point in time, there can be only
 one flying request) and ends the measurement after the operation is completed, i.e. when
-\verb|OP_STAT_VLD| pulses high. The width of a timestamp has been set to $2^{28}$ which allows to
+\verb|OP_STAT_VLD| pulses high. The width of a timestamp has been set to 28 bits which allows to
 capture delays over 1~\si{\second}. The valid latency value is stored by the \verb|DATA_LOGGER|
 component that stores maximum, minimum and a histogram of captured values. The data logger stores
 only 22 bits of a timestamp value from the latency meter since this should be sufficient according
@@ -731,8 +730,8 @@ observed any substantial difference between access patterns.
 \end{table}
 
 The write operation has been observed to be visibly faster than the read operation. The cause of
-this may be twofold: Firstly, the measurement does not perform \verb|FLUSH| operation after a write is
-issued and, secondly, the tested NVMe drive contains an on board cache for data that are about to be
+this may be twofold: Firstly, the measurement does not perform \verb|FLUSH| operation after after
+every write and, secondly, the tested NVMe drive contains an on board cache for data that are about to be
 stored to the \ac{NVM}. Storing all of the copied data on device's cache is already considered as a
 completed operation which results in a faster completion receive and lower latency.
 

@@ -21,8 +21,6 @@ devices and more throughput were required. These include:
         circuits\cite{pcie_book}.
 \end{itemize}
 
-% TODO: Add picture of PCI topology with some functions and one PCI-to-PCI bridge.
-
 The PCI protocol did not keep pace with the increasing demand for computer peripheral communication
 structures and needed to be replaced. The PCI Express protocol significantly changed the strategy
 for both the communication topology and the physical properties of the interconnect\cite{pcie_book}.
@@ -431,7 +429,8 @@ The \ac{SQE} is created by a master by following the format in~\cref{fig:nvme_sq
 defines a command within a single NVMe controller. The entry has a length of 64~B (16~DW) with
 necessary information for a controller to process a command. There are two sets of commands defined
 by the NVMe specification, namely \emph{Admin Command Set} and \emph{NVM Command Set}\footnotemark.
-The most frequently used runtime commands in this thesis are read and write from/to the \ac{NVM}.
+The most frequently used runtime commands in this thesis are read and write from/to the \ac{NVM} and
+flush.
 
 \footnotetext{In terms of more recent specification revisions, these sets use the \emph{memory-based}
     transport which differs from the \emph{message-based} transport. While the first type of transport is
