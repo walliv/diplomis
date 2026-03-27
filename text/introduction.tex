@@ -6,7 +6,7 @@ Modern datacenter workloads increasingly combine general-purpose CPUs with accel
 requiring high-throughput and low-latency access to persistent storage. In many practical systems,
 however, accelerator-to-storage communication still relies on host memory as an intermediate staging
 area. This approach is functional, but it introduces avoidable data copies when copied from
-permanent storage, additional software overhead in case the CPU needs to copy the data itselv, and
+permanent storage, additional software overhead in case the CPU needs to copy the data itself, and
 contention on host resources caused by the increased pressure on the memory bus. As storage
 performance and accelerator parallelism continue to grow, these inefficiencies become a significant
 system-level bottleneck.
@@ -19,7 +19,7 @@ hardware and software co-design: a custom FPGA IP core handles NVMe-related PCIe
 maintenance on the accelerator side, and a userspace software stack configures devices and exposes a
 block-device abstraction in userspace that can be mounted by the operating system.
 
-From the hardware perspective, the thesis begins in \cref{chap:pcie_express}, where the PCIe
+From the hardware perspective, the thesis begins with \cref{chap:pcie_express}, where the PCIe
 standard is introduced as a fundamental basis for the entire work. The chapter also presents the
 peer-to-peer communication concept at the core of the proposed implementation and explains how
 entities in the host system are configured and addressed. The standardized PCIe interface used in
@@ -43,8 +43,8 @@ between the FPGA and NVMe device.
 The software perspective is described in \cref{chap:filesystem}. The thesis uses SPDK with Linux
 ublk to create a path from userspace control to a mountable block device. This allows the solution
 to demonstrate shared storage access in a standard Linux environment rather than only raw
-sector-level tests. The selected \emph{exFAT} filesystem provides a simple and portable target for
-validating the correctness of read/write operations across CPU and accelerator accesses.
+sector-level accesses. The selected \emph{exFAT} filesystem provides a simple and portable target for
+validating the correctness of read/write operations across CPU and accelerator IO.
 
 The implemented solution is evaluated in \cref{chap:eval} on an \emph{AMD Alveo U55C} accelerator
 and an NVMe SSD in a custom server platform. Evaluation includes FPGA resource utilization and

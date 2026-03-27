@@ -1,16 +1,16 @@
 \chapter{DMA Iuventus}
 \label{chap:dma_iuventus}
 
-Since this thesis proposes a solution that can access the filesystem located on an NVMe
-device shared between the host OS and an FPGA accelerator, a specific IP core is needed on
-the accelerator's side. Without this, the user logic inside an FPGA would deal with raw PCIe data
-not only from the adjacent NVMe device but from the host system as well. Therefore, the \emph{DMA
+Since this thesis proposes a solution that can access the filesystem located on an NVMe device
+shared between the host OS and an FPGA accelerator, a specific IP core is needed on the
+accelerator's side. Without this, the user logic inside an FPGA would deal with raw PCIe data not
+only from the non-volatile storage but from the queue entries as well. Therefore, the \emph{DMA
 Iuventus} IP core has been developed to process requests between an accelerator and an NVMe
 device\cite{iuventus_github}. The term "DMA" has been retained to highlight the mechanism of the
 direct copying of data to the adjacent storage without a host CPU facilitating such transfers (this
-transfer in a \ac{P2P} manner is sometimes called \emph{Host bypassing}). This IP sits in the FPGA on the
-integrated block for PCIe to accept NVMe-specific traffic alongside logic that
-processes transactions to \ac{C/S} registers\footnotemark.
+transfer in a \ac{P2P} manner is sometimes called \emph{Host bypassing}). This IP sits in the FPGA
+on the integrated block for PCIe to accept NVMe-specific traffic alongside logic that processes
+transactions to \ac{C/S} registers\footnotemark.
 
 \footnotetext{The source files of the module are available in the cited repository under the
     \path{comp/dma/dma_iuventus} directory}
@@ -52,7 +52,7 @@ of this header are either reserved or used to create a response for \ac{MRd}.
     \centering
     \includegraphics[scale=1.3]{pict/ziti_easy_arch-cq_hdr}
     \caption[Format of the header used on the \acl{CQ} interface]{Format of the header used on the
-        \acl{CC} interface. The yellow fields are used by the DMA Iuventus core itself whereas the
+        \acl{CQ} interface. The yellow fields are used by the DMA Iuventus core itself whereas the
         green ones are only used to create the CC header of the response.}
     \label{fig:pcie_tlp_cq_hdr}
 \end{figure}
@@ -94,17 +94,16 @@ TLP has the value of \emph{Byte count} equal to the byte-length of its payload\c
 
 \section{Software configuration}
 
-This thesis uses the \emph{NDK-FPGA} framework developed by \emph{CESNET,
-a.l.e.}\cite{ndk_fpga_github}. This framework serves as a development platform for datacenter-grade
-FPGA acceleration cards providing stable communication infrastructure and allowing to instantiate
-custom user logic. In order to provide the software control, the \emph{NDK-SW} package is
-delivered along with the previous framework\cite{ndk_sw_github}. This package allows access to internal
-\ac{C/S} registers of various components within the FPGA logic from userspace. Additionally, this
-thesis utilizes the \ac{SPDK} framework in order to correctly configure an NVMe device and establish
-a \ac{P2P} communication chain between an accelerator card and the storage drive. SPDK is a
-userspace framework to create high-performance applications where drivers are running in the
-userspace\cite{spdk_paper}. This enables fast prototyping without the need to operate with kernel
-modules which can cause fatal system failures if not done carefully\cite{kernel_usr_io}.
+This thesis uses the \emph{NDK-FPGA}\cite{ndk_fpga_github} framework that serves as a development
+platform for datacenter-grade FPGA acceleration cards providing stable communication infrastructure
+and allowing to instantiate custom user logic. In order to provide the software control, the
+\emph{NDK-SW} package is delivered along with the previous framework\cite{ndk_sw_github}. This
+package allows access to internal \ac{C/S} registers of various components within the FPGA logic
+from userspace. Additionally, this thesis utilizes the \ac{SPDK} framework in order to correctly
+configure an NVMe device and establish a \ac{P2P} communication chain between an accelerator card
+and the storage drive. SPDK is used to create high-performance applications where drivers are
+running in the userspace\cite{spdk_paper}. This enables fast prototyping without the need to operate
+with kernel modules which can cause fatal system failures if not done carefully\cite{kernel_usr_io}.
 
 A device that is normally maintained by a kernel driver can only be accessed by a defined API that
 usually utilizes the \emph{sysfs} filesystem or, when used in custom applications, the \emph{ioctl}
@@ -117,8 +116,8 @@ that serve the purpose of this thesis. If \ac{IOMMU} is disabled, the system ope
 physical addresses, the device needs to be bound to the \verb|uio_pci_generic| driver, whereas, if
 enabled, the system operates with \acp{IOVA} and the \verb|vfio-pci| driver needs to be used. Both
 of these drivers expose devices' BARs to userspace where they can be managed using \ac{MMIO}.
-Since the first approach uses disabled IOMMU, the application needs to be run as the root
-user\cite{kernel_usr_io,dpdk_usr_drivers,spdk_usp_drivers, spdk_dma}.
+Since the first approach uses disabled IOMMU, the application needs to be run as the
+superuser\cite{kernel_usr_io,dpdk_usr_drivers,spdk_usp_drivers, spdk_dma}.
 
 \footnotetext{For concrete steps of how to unbind a device, check the~\cref{chap:spdk_conf}}
 
@@ -126,7 +125,7 @@ user\cite{kernel_usr_io,dpdk_usr_drivers,spdk_usp_drivers, spdk_dma}.
 
 The~\cref{fig:nvme_init_system} presents a standard customer system with a main NVMe drive and an
 instantiated set of queues for every core on the processor. The queues that are created for this
-purpose are normally stored in the host memory where the 2 buffers get allocated for every queue
+purpose are normally stored in the host memory where 2 queue buffers get allocated for every queue
 pair. The data buffers are dynamically generated since values of \ac{PRP1} and \ac{PRP2} can vary
 with every dispatched command, therefore conforming to the very principle of the \ac{DMA} where data
 do not have to be copied to special intermediate buffers but the pointers can directly reference

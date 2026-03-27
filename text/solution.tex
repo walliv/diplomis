@@ -29,17 +29,17 @@ for both the communication topology and the physical properties of the interconn
 
 The basic architecture is shown in~\cref{fig:pcie_basic}. Connections are implemented as
 point-to-point links between ports on different device types organized in a tree. The center of the
-topology is the \ac{rcpx}, which provides \emph{Root Ports}. Each device communicating over the
-infrastructure (such as today's GPU/FPGA accelerators) is called \emph{Function} and is the major
-source of traffic within the system. Each Function contains an \emph{Upstream port} for
-exchanging data. Since the number of Root Ports is limited by the processor's interconnect, fan-out
-is provided by \emph{PCIe Switches}, which supply multiple \emph{Downstream ports} and a single
-Upstream port. Each port supports full-duplex communication and introduces an asynchronous clocking
-model. Using this model significantly improves the achievable throughput of the interconnect, where
-the clock gets reconstructed from the patterns in the incoming data on the receiving port. Using
-Switches, the number of devices can be increased arbitrarily, making PCIe a switched
-network\cite{pcie_spec}. Although the PCIe specification introduces many advanced features, this
-thesis presents mostly the necessary ones for its purposes.
+topology is the \ac{rcpx}, which provides \emph{Root Ports}. Most devices communicating over the
+infrastructure (such as today's GPU/FPGA accelerators) are called \emph{Endpoints} and are the major
+source of traffic within the system. An Endpoint is a type of \emph{Function} that contains an
+\emph{Upstream port} for exchanging data. Since the number of Root Ports is limited by the
+processor's interconnect, fan-out is provided by \emph{PCIe Switches}, which supply multiple
+\emph{Downstream ports} and a single Upstream port. Each port supports full-duplex communication and
+introduces an asynchronous clocking model. Using this model significantly improves the achievable
+throughput of the interconnect, where the clock gets reconstructed from the patterns in the incoming
+data on the receiving port. Using Switches, the number of devices can be increased arbitrarily,
+making PCIe a switched network\cite{pcie_spec}. Although the PCIe specification introduces many
+advanced features, this thesis presents mostly the necessary ones for its purposes.
 
 \begin{figure}[!ht]
     \centering
@@ -49,15 +49,14 @@ thesis presents mostly the necessary ones for its purposes.
     \label{fig:pcie_basic}
 \end{figure}
 
-The PCIe specification defines elementary addressing to identify its devices, composed of
-\ac{BDF} identifiers. Every point-to-point connection in the topology makes a separate
-\emph{Bus} including internal (virtual) buses of the Switches and the Root Complex. The
-\emph{Device} identifier remained as a remnant of the PCI standard, and every Bus within the PCIe
-topology contains only one. Within each Device, one or more \emph{Functions} can be present.
-The Function is an addressable entity in the configuration space where \emph{Endpoint} is the
-most important type of a Function. Using the term `device' in this thesis will refer to a
-general device in the PCIe topology that can contain one or more Functions (or
-Endpoints)\cite{pcie_spec}.
+The PCIe specification defines elementary addressing to identify its devices, composed of \ac{BDF}
+identifiers. Every point-to-point connection in the topology makes a separate \emph{Bus} including
+internal (virtual) buses of the Switches and the Root Complex. The \emph{Device} identifier remained
+as a remnant of the PCI standard, and every Bus within the PCIe topology contains only one. Within
+each Device, one or more \emph{Functions} can be present. The Function is basically an addressable
+entity in the configuration space where \emph{Endpoints} and \emph{Bridges} can be distinguished.
+Using the term "device" in this thesis will refer to a general device in the PCIe topology that can
+contain one or more Functions (or Endpoints)\cite{pcie_spec}.
 
 Devices communicate using units called \acp{TLP}, forming a packetized transfer. Each \ac{TLP}
 contains a PCIe header used for identification followed by an optional payload. There are many
@@ -65,7 +64,7 @@ contains a PCIe header used for identification followed by an optional payload. 
 a response in the form of \ac{Cpl}, presenting a third utilized
 \ac{TLP} type. Such requests are called \emph{non-posted} (like \acp{MRd}) while requests that do
 not require a response are called \emph{posted} (like \acp{MWr}). The device creating a request is
-called \emph{Requester}, while the device `completing' the request (sending a response or just
+called \emph{Requester}, while the device "completing" the request (sending a response or just
 accepting the payload) is called \emph{Completer}.
 
 \ac{rcpx} is located on the CPU die and tightly integrated with the processing cores to provide
@@ -148,7 +147,7 @@ training} and it takes place after the network gets powered up. The training is 
 per-link basis so there are multiple differently configured links in the system at a given point in
 time. This is presented on~\cref{fig:pcie_diff_link_widths} where the M.2 SSD needs to communicate
 with the processor (where Root Ports can usually utilize up to 16 lanes) or with a \ac{NIC} which
-supports up to 16 lanes. Other than link width and data rate, more parameters are configured such as
+supports only one lane. Other than link width and data rate, more parameters are configured such as
 lane polarity, lane reversal or lane-to-lane deskew. The process of link training happens only in
 hardware and is transparent for the user\cite{pcie_book}.
 
@@ -293,7 +292,7 @@ which includes:
     interfaces. This interface is not used in this work.
     \item[\ac{CQ}] receives requests from other Functions in the PCIe hierarchy and provides
     them for the user logic.
-    \item[\ac{CC}] is used by the user logic to send responses for non-posted requests
+    \item[\ac{CC}] is used by the user logic to send completions for non-posted requests
     received on the CQ interface.
 \end{description}
 
@@ -307,7 +306,7 @@ the PCIe IP.
 The width of the AXI4-Stream interfaces depends on the configured transfer rate of the IP. This work
 implements the DMA engine using 8-lane Gen4 PCIe endpoint which results in a 512-bit wide bus
 running on 250 MHz. All of the interfaces are running on the same clock that is provided as the
-`user clock' output from the IP\cite{pcie_amd_ip}. Data units communicated on these buses are
+"user clock" output from the IP\cite{pcie_amd_ip}. Data units communicated on these buses are
 \acp{TLP} where each is started with a \emph{TLP header} followed by an optional payload of data. The
 header uniquely identifies a payload within the PCIe topology with a physical address to the
 reserved space in host memory or in another PCIe BAR. The TLP header has a fixed size of 3~DW (12~B)
@@ -371,12 +370,12 @@ of the queues to controller registers located in BAR0.
 
 For data transmission to/from the NVMe namespace, the configuration driver instantiates one or more
 \emph{I/O queue-pairs} which are used by the consumers/producers of data. Same as for the Admin
-queue-pair, these queues are allocated circular buffers in host-addressable memory. A fully
-initialized system with an 8-core processor and an NVMe device is shown
-in~\cref{fig:nvme_init_system}. The controller can associate multiple I/O Submission queues with one
-I/O Completion queue in order to save resources (this is not possible for the Admin queue-pair
-though since only one can be instantiated).  Each queue pair is identified by its ID where Admin
-queue-pair has a fixed ID of 0 and every other I/O queue pair reserves an ID of a higher index.
+queue-pair, these queues are allocated circular buffers in host-addressable memory. An example of a
+fully initialized system with an 8-core processor is shown in~\cref{fig:nvme_init_system}. The
+controller can associate multiple I/O Submission queues with one I/O Completion queue in order to
+save resources (this is not possible for the Admin queue-pair though since only one can be
+instantiated).  Each queue pair is identified by its ID where Admin queue-pair has a fixed ID of 0
+and every other I/O queue pair reserves an ID of a higher index\cite{nvme_spec}.
 
 \begin{figure}[!ht]
     \centering
@@ -414,14 +413,15 @@ can reside in the queue, is the size of the queue minus one.
 
 A master submits a command to a submission queue by using a template for \ac{SQE} described further.
 Upon storing such entry in the queue, the master updates the \ac{SQTDBL} pointer in controller's
-registers (in BAR0) in order to signalize to the controller that new command has been submitted. This
+registers (BAR0) in order to signalize to the controller that new command has been submitted. This
 is followed by the controller fetching and executing the command that is finished by dispatching a
 completion into a completion queue that uses the \ac{CQE} template. If a command operates with
 additional data (like reading/writing data from/to the \ac{NVM} or fetching commands from a
 submission queue), the controller engages the DMA engine on the device. To detect a received
 completion of a command, the master does not have to read the \ac{CQTDBL} value (since this is not
 available and remains internal to the NVMe controller anyways). Rather, every \ac{CQE} contains a
-\emph{Phase tag (P)} that indicates that a position in the Completion queue contains a valid entry.
+\emph{Phase tag (P)} that indicates that a position in the Completion queue contains a valid
+entry\cite{nvme_spec}.
 
 \subsection{Command submission}
 
@@ -429,14 +429,13 @@ The \ac{SQE} is created by a master by following the format in~\cref{fig:nvme_sq
 defines a command within a single NVMe controller. The entry has a length of 64~B (16~DW) with
 necessary information for a controller to process a command. There are two sets of commands defined
 by the NVMe specification, namely \emph{Admin Command Set} and \emph{NVM Command Set}\footnotemark.
-The most frequently used runtime commands in this thesis are read and write from/to the \ac{NVM} and
-flush.
+The most frequently used runtime commands in this thesis are \emph{read} and \emph{write} from/to
+the \ac{NVM} and \emph{flush}.
 
 \footnotetext{In terms of more recent specification revisions, these sets use the \emph{memory-based}
-    transport which differs from the \emph{message-based} transport. While the first type of transport is
-    typical for PCIe, newer specifications allow to attach NVM devices to other fabrics, like RDMA or
-    Ethernet, that use the second type of transport. These are part of the  \ac{NVMe-oF} standard
-    published separately.}
+    transport which differs from the \emph{message-based} transport. While the first type of
+    transport is typical for PCIe, newer specifications allow to attach NVM devices to other
+    \emph{fabrics}, like RDMA or Ethernet, that use the second type of transport.}
 
 \begin{figure}[!ht]
     \centering
@@ -465,7 +464,7 @@ pointing to the namespace followed by the last usable field in DW12, which conta
 The number in this field determines the size of a transfer for a currently processed command. The
 size is limited by the NVMe controller and every master has to consult controller parameters in
 order not to submit larger transfers. When larger data need to be copied, the master has to split
-the operation into multiple I/O commands.
+the operation into multiple I/O commands\cite{nvme_spec}.
 
 \subsection{Command completion}
 
@@ -477,13 +476,13 @@ though) while the second DWord is reserved. The NVMe controller indicates the in
 \ac{SQHDBL} through every completion entry which notifies the transmitter of commands about how many
 commands have been read by the controller (thus providing a backpressure). The \ac{SQID} and
 \ac{CID} fields serve as a unique identifier of a command for the used NVMe controller. The \ac{SQID} is
-present because the NVMe specification allows associating multiple Submission queues with one
+present because the NVMe specification allows creating multiple Submission queues for one
 Completion queue (this applies for one NVMe controller though since every controller maintains its
 own set of queues). A \emph{Phase Tag (P)} field follows and its value indicates that the current
 position in the Completion queue is valid (meaning the position to which \ac{CQHDBL} points to). The
 value that is considered valid is flipped upon every \ac{CQTDBL} rollover, starting as logical 1 for
 the initial pass through queue (i.e.\ after queue initialization), then flipping to 0 when the
-pointer rolls back to 0, then to 1 again and so on.
+pointer rolls back to 0, then to 1 again after another rollback and so on.
 
 \begin{figure}[!ht]
     \centering
@@ -500,7 +499,7 @@ receive valid data. The \emph{More (M)} bit indicates that a completion for a co
 composed of multiple \acp{CQE}. More specific information about a command's status can be
 found in the \ac{SCT} and \ac{SC} fields. The NVMe controller provides a coarse-grained category of
 status within the first field, whereas a more fine-grained one in the second. Here are some examples
-of possible status codes received:
+of possible status codes received\cite{nvme_spec}:
 
 \begin{itemize}
     \item A successful completion is indicated by the SCT field set to 0h (i.e.\ \emph{Generic
@@ -515,34 +514,34 @@ of possible status codes received:
 
 \subsection{Ordering}
 
-An important note has to be made with regard to the ordering of submitted commands. An NVMe controller
-arbitrates between its own set of submission queues in a round-robin fashion and can fetch multiple
-commands out of every queue\footnotemark. The order of execution where many commands are fetched is
-not defined by the NVMe specification and can be arbitrary. This is the reason why a tagging of
-commands using the \ac{CID} field is important so the submitter can bind a completion to a
-dispatched command. The order of execution can therefore be derived from the order in which the
-completions for multiple commands have been received. If strict ordering of commands is required,
-the submitter needs to implement its own mechanism for that. However, by the means of the NVMe
-specification, there are two ways of how to ensure ordering. The standard allows to use \emph{Fused
-operations} in order to force ordering of two subsequent commands. Such two commands can be executed
-atomically, resulting in the success only if both of the commands succeed. However, this feature is
-optional and not every device contains it. The second way that is always available, is to
-submit only one command to the submission queue and wait for its completion before submitting
-another command. This can be guarded by the submitter itself or by initializing the submission
-queue with the size of 2 (since this can contain at most 1 valid SQE) and using the blocking by the
-doorbell pointers. This way is used in the implementation described further in this thesis.
+An important note has to be made with regard to the ordering of submitted commands. An NVMe
+controller arbitrates between its own set of submission queues in a round-robin
+fashion\footnotemark\@ and can fetch multiple commands out of every queue. The order of execution
+where many commands are fetched is not defined by the NVMe specification and can be arbitrary. This
+is the reason why a tagging of commands using the \ac{CID} field is important so the submitter can
+bind a completion to a dispatched command\cite{nvme_spec}. The order of execution can therefore be
+derived from the order in which the completions for multiple commands have been received. If strict
+ordering of commands is required, the submitter needs to implement its own mechanism for that.
+By the means of the NVMe specification, there are two ways of how to ensure ordering. The
+standard allows to use \emph{Fused operations} in order to force ordering of two subsequent
+commands. Such two commands can be executed atomically, resulting in the success only if both of the
+commands succeed. However, this feature is optional and not every device contains
+it\cite{nvme_spec}. The second way that is always available, is to submit only one command to the
+submission queue and wait for its completion before submitting another command. This can be guarded
+by the submitter itself or by initializing the submission queue with the size of 2 (since this can
+contain at most 1 valid SQE) and using the blocking by the doorbell pointers. This way is used in
+the implementation described further in this thesis.
 
 \footnotetext{Advanced devices can implement a Weighted Round-robin or some vendor-specific mechanism.}
 
-\section{Multi-pathing}
+\section{Mesh communication}
 
 Since multiple queues can be initialized for a single NVMe controller, multiple submitters can
 execute commands on the controller. Since the proposed implementation in this thesis introduces a
 direct NVMe device access from an FPGA acceleration card using the PCIe \ac{P2P} transfer, it
 contains a potential to access multiple NVMe devices (the 1-to-M topology) as well as to access
 multiple NVMe devices from multiple acceleration cards, thus implementing an N-to-M
-topology\footnotemark\@ as seen in~\cref{fig:nvme_multipath}. This feature that allows to access one
-NVMe device from multiple masters is sometimes called \emph{multi-pathing}.
+topology\footnotemark\@ as seen in~\cref{fig:nvme_multipath}.
 
 \begin{figure}[!ht]
     \centering
