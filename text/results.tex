@@ -217,8 +217,9 @@ attributes are written. The BAR~0 of the NVMe controller can be consulted or the
 command can be submitted to the admin queue-pair. Moreover, the NVMe controller can provide more
 detailed information by submitting the \emph{Identify} command. This command provides a substantial
 amount of information with regard to the capabilities of either the controller or a namespace
-attached to it. This information is then copied to the \emph{Identify Controller} and
-\emph{Identify Namespace} data structures in the host memory\cite{nvme_spec}.
+attached to it. This information is then published int the \emph{Identify Controller} and
+\emph{Identify Namespace} data structures in the host memory to be reviewed by the
+user\cite{nvme_spec}.
 
 \footnotetext{Remember that the Queue ID is used in the \ac{CQE} as a part of a command's unique
     identifier since multiple I/O Submission queues can share one I/O Completion queue}
@@ -272,19 +273,19 @@ value).
 \subsection{Write command}
 
 The write command contains additional steps compared to the read command as seen
-in~\cref{fig:nvme_wr_cmd}. The NVMe controller fetches the command(s) in a similar manner, by receiving
-the \ac{SQTDBL} update, dispatching the \ac{MRd} to the requester and receiving completions with
-\ac{SQE} data. Afterwards, as a part of command execution, the controller dispatches one or multiple
-\acp{MRd} to the requester's \emph{Read buffer} to fetch the data that are received consequently in one
-or multiple \acp{Cpl}. The end of command execution is marked by the write of a \ac{CQE} with the
-status of the execution. Similarly, the controller can fetch multiple commands and process them as a
-batch, dispatching the completion every time. The requester then, after processing the \ac{CQE},
-updates the corresponding value of \ac{CQHDBL}. Optionally, the requester can issue a \emph{Flush}
-command to permanently store the data on the \ac{NVM} which can be seen in the same figure as well.
-This command can be issued on devices that use a separate write cache. It is usually not necessary to
-explicitly use this command unless synchronization between two requesters is required. The flushing
-can be left on the automatic mechanism of the controller which also flushes the whole content of a
-cache when it shuts down.
+in~\cref{fig:nvme_wr_cmd}. The NVMe controller fetches the command(s) in a similar manner, by
+receiving the \ac{SQTDBL} update, dispatching the \ac{MRd} to the requester and receiving
+completions with \ac{SQE} data. Afterwards, as a part of command execution, the controller
+dispatches one or multiple \acp{MRd} to the requester's \emph{Read buffer} to fetch the data that
+are received consequently in one or multiple \acp{Cpl}. The end of command execution is marked by
+the write of a \ac{CQE} with the status of the execution. Similarly, the controller can fetch
+multiple commands and process them as a batch, dispatching the completion every time. The requester
+then, after processing the \ac{CQE}, updates the corresponding value of \ac{CQHDBL}. Optionally, the
+requester can issue a \emph{Flush} command to permanently store the data on the \ac{NVM} which can
+be seen in the same figure as well. This command is suitable on NVMe devices that contain a
+dedicated write cache. It is usually not necessary to explicitly use this command unless
+synchronization between two requesters is required. The flushing can be left on the automatic
+mechanism of the controller which also flushes the whole content of a cache when it shuts down.
 
 \begin{figure}[!ht]
     \centering
@@ -297,9 +298,9 @@ cache when it shuts down.
 
 \section{Hardware implementation}
 
-The hardware architecture enables full P2P communication between an FPGA accelerator and an NVMe
-device. This architecture is depicted in~\cref{fig:iuventus_block}. The architecture transports data
-on streaming buses rather than memory-mapped ones. The only exception is the \ac{MI}
+The created hardware design enables full P2P communication between an FPGA accelerator and an NVMe
+device. Its block scheme is depicted in~\cref{fig:iuventus_block}. The architecture transports
+data on streaming buses rather than memory-mapped ones. The only exception is the \ac{MI}
 interface\cite{ndk_mi_spec} connected to the \verb|Software manager| that contains the \ac{C/S}
 registers to configure the DMA module. This operates on memory-mapped chunks of 32~bits. The
 streaming interfaces, namely \verb|CQ|, \verb|CC|, \verb|RQ|, \verb|Read Data| and
@@ -324,13 +325,13 @@ region. This extension includes adding more subsignals to the \verb|TUSER| while
     TREADY are high, i.e. both the Transmitter and the Receiver are ready to transfer
     data\cite{axis_spec}.}
 
-\ac{MFB} has been created to exactly address this issue of dispatching multiple frames (or packets) in one clock
-cycle and does not need additional signals to facilitate that. A transfer consists of multiple
-\emph{regions}, where each is composed of 1 or more \emph{blocks}. Each block contains then 1 or
-more \emph{items} and each of the items is n bits long. All of the used interfaces of the PCIe
+\ac{MFB} has been created to exactly address this issue of dispatching multiple frames (or packets)
+in one clock cycle and does not need additional signals to facilitate that. A transfer consists of
+multiple \emph{regions}, where each is composed of 1 or more \emph{blocks}. Each block contains then
+1 or more \emph{items} and each of the items is n bits long. All of the used interfaces of the PCIe
 IP have the same configuration, that is 2 regions, 1 block, 8 items and 32 bits\footnotemark\@ per
-item (referred to in a short form as the \emph{2,1,8,32} configuration) resulting in 512~bits. MFB
-consists of following signals:
+item (referred to, in a short form, as the \emph{2,1,8,32} configuration) resulting in 512~bits of
+width. MFB consists of following signals:
 
 \footnotetext{Setting the item size to 32 bits is in accord with the PCIe interface operating with
     DWords as the smallest atomic unit.}
@@ -427,16 +428,17 @@ side. The constraint of capping the amount of \acp{LBA} being requested is cause
 size of the memory array in this component which consists of 64~BRAM blocks (since the bus is
 64~bytes wide and byte-level addressability is needed). This array has an overall capacity of
 256~KiB and it is split into two sectors where one is occupied by the Submission/Completion queue,
-while the other with the Read/Write buffer. The size of each sector corresponds to exactly 256~LBAs.
+while the other with the Read/Write buffer. The size of each sector corresponds to exactly 256~LBAs;
+hence, the maximum read/write requests size is capped at this value.
 
 As soon as the \verb|SQ Cmd Dispatcher| creates the command and stores it in the Submission queue it
-sends an update of the \ac{SQTDBL} to the \verb|Doorbell updater|. This queues this update for a
-dispatch which is then dispatched whenever the \ac{RQ} interface is ready. After restart or a long
-period where the pointer has not been updated, the update is dispatched immediately. After
-dispatching one update, the delay counter is activated. The pointer can be further updated during
-this delay but the update is dispatched first when the delay expires. This mechanism has been added to
-enable submitting multiple commands and then fetching them in batch. This reduces the pressure on
-the PCIe interface by lowering the amount of \acp{TLP} containing only synchronization data.
+sends an update of the \ac{SQTDBL} to the \verb|Doorbell updater|. This queues this update and then
+dispatches it whenever the \ac{RQ} interface is ready. After restart or a long period where the
+pointer has not been updated, the update is dispatched immediately. After dispatching one update,
+the delay counter is activated. The pointer can be further updated during this delay but the update
+is dispatched first when the delay expires. This mechanism has been added to enable submitting
+multiple commands and then fetching them in batch. This reduces the pressure on the PCIe interface
+by lowering the amount of \acp{TLP} containing only synchronization data.
 
 The \acl{MRd} from the NVMe controller arrives on the CQ interface and is routed from the
 \verb|CQ Metadata Extractor| to the \verb|PCIe Header FIFO|. The Metadata extractor calculates the
@@ -460,7 +462,7 @@ processed command. These data are routed towards and written to the \verb|Write 
 the controller sends a \ac{CQE} with the status of the operation. The \verb|CQE Processor| component
 detects the received \ac{CQE} based on the current value of the \ac{CQHDBL} and the \emph{Phase
 tag}. The component then returns the status of the command to the \verb|Operation control| and
-updates the value of \ac{CQHDBL}\footnotemark in the \verb|Doorbell updater|. When the returned
+updates the value of \ac{CQHDBL}\footnotemark\@ in the \verb|Doorbell updater|. When the returned
 status is successful, the \verb|Operation control| then reads the data from the \verb|Write buffer|,
 thus returning them to the user logic.
 
@@ -510,16 +512,16 @@ then updating the \ac{SQTDBL} in the \verb|Doorbell updater|. The NVMe controlle
 from the Submission queue whose data are then returned on the \ac{CC} interface. During execution of
 this command, the controller sends multiple read requests to the read buffer that are routed from
 the CQ interface through the \verb|CQ Metadata Extractor| to the header FIFO. These requests can
-request data chunks as large as the current \ac{MRRS} setting (up to 4~KiB) but the
-\verb|PCIe Read Responder| slices each of these requests into 128~B chunks as previously described.
+address data chunks as large as the current \ac{MRRS} setting (up to 4~KiB) but the
+\verb|PCIe Read Responder| dispatches completions in 128~B chunks as previously described.
 
 The completion of a command happens in the same way as in case of the read command where the NVMe
 controller writes a \ac{CQE} into the Completion queue which is then detected by the
-\verb|CQE Processor| and its status returned to the \verb|Operation control|. The
-status is also signalized on the \verb|Operation status| interface with the same status codes as
-described in~\cref{tab:op_stat_codes}. The flushing operation is done after a delay of approx. 1~s
-to ensure some synchronization with regards to the shared nature of the implementation presented in
-this thesis. The flushing command is dispatched from the \verb|SQ Cmd Dispatcher| as well with all
+\verb|CQE Processor| and its status returned to the \verb|Operation control|. The status is also
+signalized on the \verb|Operation status| interface with the same status codes as described
+in~\cref{tab:op_stat_codes}. The flushing operation is triggered after a delay of approximately 1~s
+to ensure some level synchronization when the sectors are going to be accessed by the host system in
+the future. The flushing command is dispatched from the \verb|SQ Cmd Dispatcher| as well with all
 its fields set to 0 except the index of a namespace.
 
 \chapter{Filesystem integration}
@@ -543,16 +545,18 @@ loops\cite{spdk_usp_drivers}.}
 
 Linux-based operating systems distinguish three types of devices: \emph{character (char)}
 devices that operate with their data in streams (like a sound card or serial console),
-\emph{network} devices that serve only as an interface with callbacks returning/putting packet data;
+\emph{network} devices that serve as an interface with callbacks returning/putting packet data;
 and \emph{block (bdev)} devices that operate on large blocks of data (usually 512~B or more). Both
 the char and block devices are available as file entries in the operating system (i.e. device files
 in the \verb|/dev| directory), although the block devices are the only ones available to be read
-back and forth as a normal file (meaning the users are able to perform seek on them). There can be
-exceptions to some char devices but they generally prohibit to perform a seek to their device files.
-The block devices are the only ones that are available to run a file system\cite{linux_drivers}
+back and forth as a normal file (meaning the users are able to perform seek on them)\footnotemark.
+These devices are the only ones that are available to run a file system\cite{linux_drivers}
 because they provide an abstraction over multiple different storage hardware by disposing of a
-unified set of operations\cite{spdk_paper}. The Linux filesystem drivers then attach to specific
+unified set of operations\cite{spdk_paper}. Various Linux filesystem drivers then attach to specific
 block devices.
+
+\footnotetext{There can be exceptions to some char devices but they generally prohibit to perform a
+seek to their device files.}
 
 An interesting case occurs when a userspace framework is used to operate on a block device such as
 the SPDK application operating on an NVMe drive in case of this thesis. A filesystem can be mounted
@@ -585,8 +589,8 @@ filesystem is also supported by the Linux kernel, thus by available tools, like 
 \emph{Cluster Heap}), is organized as an array of \emph{clusters} where each consists of multiple
 \emph{sectors}, each, in case of the NVMe drive, of a size of one \ac{LBA}\cite{exfat_spec}. The
 configuration used in this thesis uses the cluster size of 128~KiB which corresponds to 256~LBAs
-(this cluster size is automatically set by the \verb|mkfs.exfat| utility\cite{mkfs_manpage}). The
-important features of the standard are the following :
+(this cluster size is automatically set by the \verb|mkfs.exfat| utility\cite{mkfs_manpage}). Theses
+are the distinctive features of this filesystem:
 \begin{itemize}
     \item The allocation of clusters is not kept inside the nodes of the \ac{FAT} (as it is in the
     case of the FAT32 filesystem) but in the \emph{Allocation Bitmap} located in the \emph{root
@@ -596,8 +600,8 @@ important features of the standard are the following :
     \item A file does not have to use the FAT if such file can be stored in a contiguous string of
     clusters. This is marked by an attribute of the file and the amount of utilized clusters is
     still determined by a size of the file.
-    \item The specification allows to encompass storage volumes as large as 64~ZB. However, it is
-    recommended to not use more than $2^{24}-2$ clusters in the cluster heap which results in a
+    \item The specification allows to encompass storage volumes as large as 64~ZB. However, it
+    recommends to not use more than $2^{24}-2$ clusters in the cluster heap which results in a
     maximum capacity of 512~TB given the maximum cluster size of 32~MB\cite{exfat_spec}.
 \end{itemize}
 
@@ -631,12 +635,13 @@ the DMA module and the PCIe IP, the test design contains several additional comp
     \item The boot logic allowing to load an FPGA bitstream through PCIe into the internal flash and
     trigger design reload through \ac{ICAP}\cite{amd_icap}.
     \item Testing logic to dispatch requests to the DMA Iuventus.
-    \item Measurement component for NVMe request latency with its storage for a histogram.
+    \item Measurement components for NVMe request latency with its storage for a histogram.
+    \item Measurement components for IOps and throughput.
     \item One \ac{ILA} core\cite{amd_ila} to show transactions on the \verb|RD_MFB_*| interface of
     the DMA module.
 \end{itemize}
 
-The design meets timing requirements with 0.079~ns WNS and 0.010~ns WHS.
+The design meets timing requirements with 0.004~ns WNS and 0.010~ns WHS.
 
 \begin{table}[!ht]
     \centering
@@ -650,10 +655,10 @@ The design meets timing requirements with 0.079~ns WNS and 0.010~ns WHS.
                     & \textbf{abs} & \textbf{\%} & \textbf{abs} & \textbf{\%} &
                     \textbf{abs} & \textbf{\%} \\
     \midrule
-    LUT             & 14625  & 1.12      & 7661   & 0.59      & 30502  & 2.34  \\
-    LUTRAM          & 268    & 0.04      & 745    & 0.12      & 3861   & 0.64  \\
-    FF              & 23645  & 0.91      & 18429  & 0.71      & 67106  & 2.57  \\
-    BRAM Tile       & 134.5  & 6.67      & 22     & 1.09      & 253    & 12.55 \\
+    LUT             & 12532  & 0.96      & 9155   & 0.70      & 24792  & 1.90  \\
+    LUTRAM          & 268    & 0.04      & 1148   & 0.19      & 1938   & 0.32  \\
+    FF              & 22208  & 0.85      & 24903  & 0.96      & 52498  & 2.01  \\
+    BRAM Tile       & 134.5  & 6.67      & 30.5   & 1.51      & 194.5  & 9.65  \\
     URAM            & 0      & 0         & 0      & 0         & 11     & 1.15  \\
     \bottomrule
     \end{tabular}
@@ -728,11 +733,99 @@ observed any substantial difference between access patterns.
     \end{tabular}
 \end{table}
 
-The write operation has been observed to be visibly faster than the read operation. The cause of
-this may be twofold: Firstly, the measurement does not perform \verb|FLUSH| operation after after
-every write and, secondly, the tested NVMe drive contains an on board cache for data that are about to be
-stored to the \ac{NVM}. Storing all of the copied data on device's cache is already considered as a
-completed operation which results in a faster completion receive and lower latency.
+\section{IOps and throughput measurement}
+
+Throughput was measured using the same parameter sweep as in the latency experiment, extended with
+additional request sizes. The results are shown in~\cref{tab:thrp_results}. Two metrics were
+evaluated. The first metric is \ac{IOps}, measured over an interval of $2^{28}$ clock cycles (with
+a 4~ns clock period) by counting accepted requests as events. For read operations, an event is counted when
+both \verb|NVME_RD_REQ_VLD| and \verb|NVME_RD_REQ_RDY| are high. For write operations, an event is
+counted when a frame is accepted on the module's MFB write interface, i.e., when
+\verb|NVME_WR_MFB_SRC_RDY|, \verb|NVME_WR_MFB_DST_RDY|, and \verb|NVME_WR_MFB_SOF| are all high.
+The comparison across addressing and access modes is shown in~\cref{fig:iops_plot}.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=0.7]{pict/iops_all_modes.pdf}
+    \caption{Measured IOps for different numbers of copied LBAs and access patterns}
+    \label{fig:iops_plot}
+\end{figure}
+
+The second metric was raw byte throughput measured on the MFB interfaces. This was measured on the
+\verb|NVME_RD_MFB*| interface used for incoming frames and on the \verb|NVME_WR_MFB*| interface used
+for outgoing frames. As
+with the IOps metric, bytes were counted over the same measurement interval. The comparison across
+addressing and access modes is shown in~\cref{fig:thrp_plot}. The theoretical maximum throughput of
+the tested NVMe drive is 4~GBps, which is reached for the largest read requests. However, this
+value is not directly derivable from the measured IOps. A plausible explanation is buffering along
+the FPGA--NVMe path, which can create bursts that dominate a substantial part of the observation
+window.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[scale=0.7]{pict/throughput_all_modes.pdf}
+    \caption{Measured throughput for different numbers of copied LBAs and access patterns.
+    The write operation exceeds the theoretical maximum, which is probably caused by fluctuating
+    data rate on the PCIe chain.}
+    \label{fig:thrp_plot}
+\end{figure}
+
+\begin{table}[!ht]
+    \centering
+    \caption{Results of throughput measurement for different operations, request sizes and access pattern}
+    \label{tab:thrp_results}
+    \begin{tabular}{llSSS}
+        \toprule
+        \textbf{Mode} & \textbf{Addressing} & \textbf{LBAs} & \textbf{IOps} & \textbf{Throughput} \\
+                    & & & & \textbf{[GBps]} \\
+        \midrule
+        RD & Random & 1 & 14386 & 0.048 \\
+         &  & 2 & 14562 & 0.095 \\
+         &  & 4 & 14269 & 0.187 \\
+         &  & 8 & 13825 & 0.363 \\
+         &  & 16 & 10373 & 0.544 \\
+         &  & 32 & 8654 & 0.907 \\
+         &  & 64 & 7640 & 1.601 \\
+         &  & 128 & 6233 & 2.614 \\
+         &  & 256 & 4720 & 3.964 \\
+        \addlinespace
+         & Sequential & 1 & 15852 & 0.052 \\
+         &  & 2 & 14143 & 0.092 \\
+         &  & 4 & 13765 & 0.180 \\
+         &  & 8 & 15621 & 0.514 \\
+         &  & 16 & 10166 & 0.533 \\
+         &  & 32 & 8363 & 0.881 \\
+         &  & 64 & 7526 & 1.689 \\
+         &  & 128 & 6249 & 2.684 \\
+         &  & 256 & 4754 & 3.836 \\
+        \midrule
+        WR & Random & 1 & 59792 & 0.197 \\
+         &  & 2 & 57843 & 0.378 \\
+         &  & 4 & 53488 & 0.698 \\
+         &  & 8 & 47825 & 1.253 \\
+         &  & 16 & 46104 & 2.403 \\
+         &  & 32 & 36803 & 4.230 \\
+         &  & 64 & 26288 & 6.685 \\
+         &  & 128 & 21642 & 9.426 \\
+         &  & 256 & 12547 & 10.402 \\
+        \addlinespace
+         & Sequential & 1 & 60618 & 0.197 \\
+         &  & 2 & 58591 & 0.385 \\
+         &  & 4 & 54421 & 0.714 \\
+         &  & 8 & 48765 & 1.273 \\
+         &  & 16 & 47806 & 2.506 \\
+         &  & 32 & 41619 & 4.323 \\
+         &  & 64 & 33204 & 6.964 \\
+         &  & 128 & 23421 & 9.872 \\
+         &  & 256 & 9882 & 9.380 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The write operation is visibly faster than the read operation. One likely reason is that the tested
+NVMe drive contains an on-board cache for data that are about to be stored in \ac{NVM}. Once the
+copied data are stored in the device cache, the operation can already be reported as completed,
+which results in lower latency and faster completion responses.
 
 \section{Application usage}
 \label{sect:app_usage}
