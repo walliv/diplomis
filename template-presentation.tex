@@ -12,7 +12,7 @@
 
 \usepackage[utf8]		  %	The input files are in UTF-8 (unicode)
 	{inputenc}					% Package for setting input encoding
-	
+
 \usepackage{graphicx} % Package for inclusion of external graphics
 
 \usepackage[
@@ -29,6 +29,8 @@
                       % when creating tables
 
 \usepackage{algorithm2e}	% Package for typesetting algorithms/pseudocode
+\usepackage{multirow}
+\usepackage{siunitx}  % For decimal alignment
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%                   Definitions                 %%%%%%%%%%
@@ -59,8 +61,7 @@
 % but with no guarantees
 \logoheader					% inserts small BUT FEEC logotype in the header; leave this in use
 
-
-
+\setbeamertemplate{caption}[default]
 
 \begin{document}
 
@@ -70,119 +71,367 @@
 % the title slide will be created without header, footer etc.
 \maketitle
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% First slide should contain the goals of the thesis
-\begin{frame} 
-	\frametitle{Goals}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Content}
 	\begin{itemize}
-			\item Study
-			\item Describe
-				\begin{itemize}
-					\item the studied
-				\end{itemize}
-			\item Implement
-				\begin{itemize}
-					\item older
-					\item new
-				\end{itemize}
-			\item Compare, evaluate
-				\begin{itemize}
-						\item results
-				\end{itemize}
+			\item Motivation and goals
+			\item PCI Express and NVMe essentials
+			\item DMA Iuventus architecture
+			\item Shared filesystem access
+			\item Evaluation highlights
+			\item Conclusion
 	\end{itemize}
 \end{frame}
 
-%%%%%%%%%%%%%
-\begin{frame} 
-	\frametitle{Key Tools}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Motivation}
+	\begin{itemize}
+		\item Direct access to persistent data from accelerator
+		\item Conventional CPU-based copies introduce an overhead
+		\item Host memory used for staging (double copying)
+		\item With peer-to-peer transfers, the NVMe can be directly accessed
+		\item Linux user friendly (standardized filesystem)
+	\end{itemize}
 
-	% environment 'alertblock' for alerting the particular info
-	\begin{alertblock}{The key tool in this thesis is the Euler formula}
-		$$\eul^{\jmag x}=\cos x + \jmag\sin x$$
-	\end{alertblock}
+	\vspace{0.4cm}
+	\textbf{Goal of this work:} enable shared CPU-FPGA filesystem access to NVMe while preserving a standard Linux workflow.
+\end{frame}
 
-	\vspace{4ex}
-	The Euler identity is the special case of the above, with $x=\uppi$\,:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	% environment 'block'
-	\begin{block}{Euler identity}
-		$$\eul^{\jmag \uppi}=\cos \uppi + \jmag\sin \uppi,$$\\
-		from which it follows that
-		$$\eul^{\jmag \uppi}+1=0.$$
-	\end{block}
-\end{frame} 
+\begin{frame}
+	\frametitle{PCI Express}
 
-
-%%%%%%%%%%%%%
-\begin{frame} 
-	\frametitle{Printed Circuit Board}
-	
-	\begin{columns}[T] 								% columns environment, top placement
-		\begin{column}{0.4\textwidth}		% first column
-			Depicted model contains:\\[2ex]
-			%
+	\begin{columns}[T] 					% columns environment, top placement
+		\begin{column}{0.6\textwidth}	% first column
 			\begin{itemize}
-				\item Board
-				\item Signals
-				\item Battery
+				\item Switched point-to-point interconnect
+				\item Memory-mapped communication
+				\item Support on FPGAs
 			\end{itemize}
+
+			\centering
+			\includegraphics[scale=0.9]{pict/pcie_link_schema.pdf}
 		\end{column}
 		%
-		\begin{column}{0.6\textwidth}		% second column
-			\begin{figure}%	
+		\begin{column}{0.4\textwidth}		% second column
+			\centering
+			\includegraphics[width=\columnwidth]{pict/cem_conns.jpg}
+			\includegraphics[width=\columnwidth]{pict/nvme_drive.jpg}
+		\end{column}
+	\end{columns}											% end of the main environment
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		% \begin{figure}%
+		% 	\centering
+		% 	\vspace{1cm}	              % horizontal space
+		% 	\includegraphics[scale=0.9]{pict/pcie_link_schema.pdf}
+		% \end{figure}
+
+\begin{frame}
+	\frametitle{PCIe Interconnect}
+	\begin{columns}[T] 					% columns environment, top placement
+		\begin{column}{0.5\textwidth}	% first column
+			\begin{itemize}
+				\item Tree topology
+				\item Root Complex, Switches, Endpoints
+				\item Address-based routing (for our case :)
+				\item Host bypass possible if platform permits P2P
+				\item Transaction Layer Packet (TLP)
+					\begin{itemize}
+						\item Memory Write request
+						\item Memory Read request
+						\item Completion
+					\end{itemize}
+			\end{itemize}
+			\vspace{0.2cm}
+			\centering
+			\includegraphics[width=1.2\columnwidth]{pict/data_units-tlp.pdf}
+		\end{column}
+		%
+		\begin{column}{0.5\textwidth}		% second column
+			\vspace{1cm}
+			\centering
+			\includegraphics[width=1.05\columnwidth]{pict/host_topology-raw_topology.pdf}
+		\end{column}
+	\end{columns}											% end of the main environment
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\vspace{1cm}
+	\begin{columns}[T] 					% columns environment, top placement
+		\begin{column}{0.55\textwidth}	% first column
+			\begin{figure}%
 				\centering
-				\vspace{1cm}	              % horizontal space
-				\includegraphics[width=0.8\columnwidth]{pict/soucastky}
+				\includegraphics[width=\columnwidth]{pict/host_topology-d2d_write.pdf}
+				\caption{Write request path}
+			\end{figure}
+		\end{column}
+		%
+		\begin{column}{0.45\textwidth}		% second column
+			\begin{figure}%
+				\centering
+				\includegraphics[width=\columnwidth]{pict/host_topology-simple_read.pdf}
+				\caption{Read request path}
 			\end{figure}
 		\end{column}
 	\end{columns}											% end of the main environment
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Non-volatile Memory Express (NVMe)}
+	\begin{columns}[T] 					% columns environment, top placement
+		\begin{column}{0.5\textwidth}	% first column
+			\begin{itemize}
+				\item Queue-pair model: submission and completion queues
+				\item Commands are fetched by controller over PCIe
+				\item Pointers synchronize queue state (doorbells)
+				\item Same protocol used by host and FPGA requesters
+			\end{itemize}
+		\end{column}
+		%
+		\begin{column}{0.5\textwidth}		% second column
+			\centering
+			\includegraphics[width=\columnwidth]{pict/ziti_easy_arch-nvme_design.pdf}
 
-%%%%%%%%%%%%%
-\begin{frame} 
-	\frametitle{Results}
-	\vspace{1cm}
-	\begin{table}[]
+			\vspace{0.5cm}
+			\includegraphics[width=\columnwidth]{pict/ziti_easy_arch-nvme_initialized_system.pdf}
+		\end{column}
+	\end{columns}											% end of the main environment
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Implementation overview}
+	\begin{columns}[T] 					% columns environment, top placement
+		\begin{column}{0.5\textwidth}	% first column
+			\begin{itemize}
+				\item FPGA card: AMD Alveo U55C
+				\item Core component: DMA Iuventus IP
+				\item Accelerator BARs hold queues and data buffers
+				\item SPDK configures NVMe and queue resources
+				\item Linux ublk exposes mountable block device
+				\item Shared CPU-FPGA access to one filesystem
+			\end{itemize}
+		\end{column}
+		%
+		\begin{column}{0.5\textwidth}		% second column
+			% \centering
+			% \includegraphics[width=\columnwidth]{pict/ziti_easy_arch-nvme_design.pdf}
+
+			% \vspace{0.5cm}
+			% \includegraphics[width=\columnwidth]{pict/ziti_easy_arch-nvme_initialized_system.pdf}
+		\end{column}
+	\end{columns}											% end of the main environment
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Evaluation: Resource utilization}
+	\begin{table}[!ht]
 		\centering
-		\caption{Results of measurement in mobile networks}
-		\label{tab:table.results}
-			\begin{tabular}{lcc}
-				\toprule
-					Technology  & Speed, download [kB/s] & Speed, upload [kB/s] \\
-				\midrule
-					GPRS (2,5G)	& 7,2 	& 3,6\\
-					UMTS 3G     & 48 		& 48\\
-					HSPA (3,5G)	&	1\,706	&	720\\
-					LTE (4G) 		& 40\,750 & 10\,750\\
-				\bottomrule                                       
-			\end{tabular}
+		\caption{FPGA resource consumption after design implementation phase (fully placed and routed)}
+		% \label{tab:res_cons}
+		\begin{tabular}{lcccc|cc}
+		\toprule
+		\multirow{2}{*}{\textbf{Resource type}} & \multicolumn{2}{c}{\textbf{DMA Iuventus}} &
+		\multicolumn{2}{c}{\textbf{PCIe IP}} & \multicolumn{2}{c}{\textbf{Test design total}} \\
+		\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+						& \textbf{abs} & \textbf{\%} & \textbf{abs} & \textbf{\%} &
+						\textbf{abs} & \textbf{\%} \\
+		\midrule
+		LUT             & 12532  & 0.96      & 9155   & 0.70      & 24792  & 1.90  \\
+		LUTRAM          & 268    & 0.04      & 1148   & 0.19      & 1938   & 0.32  \\
+		FF              & 22208  & 0.85      & 24903  & 0.96      & 52498  & 2.01  \\
+		BRAM Tile       & 134.5  & 6.67      & 30.5   & 1.51      & 194.5  & 9.65  \\
+		URAM            & 0      & 0         & 0      & 0         & 11     & 1.15  \\
+		\bottomrule
+		\end{tabular}
 	\end{table}
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Evaluation: Byte and IO throughput}
+	\begin{itemize}
+		\item Measured over period of $2^{28}$ cycles (\textasciitilde1 second)
+	\end{itemize}
+\end{frame}
 
-%%%%%%%%%%%%%
-\begin{frame} 
-	\frametitle{Conclusion}
-	\dots
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\centering
+	\includegraphics[width=0.9\textwidth]{pict/throughput_all_modes.pdf}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\centering
+	\includegraphics[width=0.9\textwidth]{pict/iops_all_modes.pdf}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Evaluation: Latency}
+	\begin{itemize}
+		\item Timestamp width 28 bits (\textasciitilde1 second delay)
+		\item Results stored in histogram (1 bin = 512 ns)
+		\item 50000 repetitions
+	\end{itemize}
+
+	% \begin{table}[!ht]
+		\centering
+		% \setlength{\tabcolsep}{4pt}
+		% \caption[Latency measurement results]{Results of latency measurement for different operations,
+		% request sizes and access pattern (\si{\micro\second})}
+		% \label{tab:latency-results}
+		\begin{tabular}{lllSSSSSS@{}}
+			\toprule
+			\textbf{Op.} & \textbf{Access} & \textbf{Size} & {\textbf{Min}} &
+			{\boldmath $P_{50}$} & {\boldmath $P_{80}$} & {\boldmath $P_{99}$} & {\textbf{Max}} \\
+			& & {[LBAs]} & & & & & & \\
+			\midrule
+			RD  & Random     &   1 &  46.64 &  66.71 &  78.65 &  81.75 & 1952.72 \\
+				% &            &   8 &  47.81 &  65.54 &  70.30 &  80.40 &  82.88 & 1840.14 \\
+				% &            &  64 &  86.90 & 111.77 & 130.60 & 143.96 & 149.33 & 1665.92 \\
+				&            & 256 & 143.27 & 203.46 & 220.98 & 238.26 & 357.50 \\
+			\addlinespace
+				& Sequential &   1 &  62.12 &  63.15 &  64.83 &  65.97 & 173.30 \\
+				% &            &   8 &  47.80 &  48.73 &  67.89 &  80.66 &  82.97 & 1951.48 \\
+				% &            &  64 &  85.98 & 111.33 & 130.51 & 143.87 & 148.51 & 2029.71 \\
+				&            & 256 & 144.12 & 201.50 & 218.77 & 237.61 & 1904.40 \\
+			\midrule
+			WR  & Random     &   1 &   8.34 &    8.61 &   9.07 & 107.28 & 5379.27 \\
+				% &            &   8 &   9.50 &   9.77 &  10.26 &  26.65 &  88.71 & 5385.86 \\
+				% &            &  64 &  19.70 &  19.69 &  20.41 &  23.91 & 139.18 & 5633.68 \\
+				&            & 256 &  54.05 &   62.65 &  69.77 & 454.14 & 6692.82 \\
+			\addlinespace
+				& Sequential &   1 &   8.34 &     8.45 &   8.60 &   8.70 &  10.19 \\
+				% &            &   8 &   9.56 &   9.77 &  10.18 &  64.46 & 301.59 & 5949.84 \\
+				% &            &  64 &  19.71 &  19.65 &  20.44 &  78.26 & 405.75 & 6499.20 \\
+				&            & 256 &  54.10 &   71.57 &  90.12 & 251.26 & 5860.76 \\
+			\bottomrule
+		\end{tabular}
+	% \end{table}
+
 \end{frame}
 
 
-% thanks
-\begin{frame}[c] 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\vspace{1cm}
+	\textbf{Next step:} live demo of end-to-end shared read/write access.
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Conclusion}
+	\begin{itemize}
+		\item Design verified using functional verification (CocoTB)
+		\item Validated in hardware
+		\item Shared CPU-FPGA filesystem access over NVMe was demonstrated
+		\item PCIe peer-to-peer path avoids mandatory host-memory staging
+		\item Linux filesystem access is maintained
+		\item Future development
+			\begin{itemize}
+				\item More outstanding commands
+				\item Support for more NVMe drives
+				\item Alveo V80 support
+				\item Support for both NVMe and host memory transfers
+			\end{itemize}
+	\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[c]
 % no frametitle
 	\frametitle{\mbox{ }}
 	\begin{center}
 		{\Huge Thank you for your attention!}
+
+		\vspace{1cm}	              % horizontal space
+		{\Large Any questions?}
 	\end{center}
 \end{frame}
+\end{document}
+
+% \begin{frame}
+% 	\frametitle{Key Tools}
+
+% 	% environment 'alertblock' for alerting the particular info
+% 	\begin{alertblock}{The key tool in this thesis is the Euler formula}
+% 		$$\eul^{\jmag x}=\cos x + \jmag\sin x$$
+% 	\end{alertblock}
+
+% 	\vspace{4ex}
+% 	The Euler identity is the special case of the above, with $x=\uppi$\,:
+
+% 	% environment 'block'
+% 	\begin{block}{Euler identity}
+% 		$$\eul^{\jmag \uppi}=\cos \uppi + \jmag\sin \uppi,$$\\
+% 		from which it follows that
+% 		$$\eul^{\jmag \uppi}+1=0.$$
+% 	\end{block}
+% \end{frame}
+
+
+%%%%%%%%%%%%%
+% \begin{frame}
+% 	\frametitle{Printed Circuit Board}
+
+% 	\begin{columns}[T] 								% columns environment, top placement
+% 		\begin{column}{0.4\textwidth}		% first column
+% 			Depicted model contains:\\[2ex]
+% 			%
+% 			\begin{itemize}
+% 				\item Board
+% 				\item Signals
+% 				\item Battery
+% 			\end{itemize}
+% 		\end{column}
+% 		%
+% 		\begin{column}{0.6\textwidth}		% second column
+% 			\begin{figure}%
+% 				\centering
+% 				\vspace{1cm}	              % horizontal space
+% 				\includegraphics[width=0.8\columnwidth]{pict/soucastky}
+% 			\end{figure}
+% 		\end{column}
+% 	\end{columns}											% end of the main environment
+% \end{frame}
+
+
+%%%%%%%%%%%%%
+% \begin{frame}
+% 	\frametitle{Results}
+% 	\vspace{1cm}
+% 	\begin{table}[]
+% 		\centering
+% 		\caption{Results of measurement in mobile networks}
+% 		\label{tab:table.results}
+% 			\begin{tabular}{lcc}
+% 				\toprule
+% 					Technology  & Speed, download [kB/s] & Speed, upload [kB/s] \\
+% 				\midrule
+% 					GPRS (2,5G)	& 7,2 	& 3,6\\
+% 					UMTS 3G     & 48 		& 48\\
+% 					HSPA (3,5G)	&	1\,706	&	720\\
+% 					LTE (4G) 		& 40\,750 & 10\,750\\
+% 				\bottomrule
+% 			\end{tabular}
+% 	\end{table}
+% \end{frame}
+
 
 % opponent's questions
-\frame{
-\frametitle{Questions of the Opponent}
-	\emph{Is there some relationship between your formula (1.2) and integral Maxwell equations?}\\[2ex]
-	%
-	Well, yes, it might be\,\dots
-}
-
-\end{document}
+% \frame{
+% \frametitle{Questions of the Opponent}
+% 	\emph{Is there some relationship between your formula (1.2) and integral Maxwell equations?}\\[2ex]
+% 	%
+% 	Well, yes, it might be\,\dots
+% }
