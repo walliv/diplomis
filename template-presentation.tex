@@ -77,9 +77,10 @@
 	\begin{itemize}
 			\item Motivation and goals
 			\item PCI Express and NVMe essentials
-			\item DMA Iuventus architecture
+			\item Hardware architecture
 			\item Shared filesystem access
 			\item Evaluation highlights
+			\item Demo
 			\item Conclusion
 	\end{itemize}
 \end{frame}
@@ -88,11 +89,10 @@
 \begin{frame}
 	\frametitle{Motivation}
 	\begin{itemize}
-		\item Direct access to persistent data from accelerator
-		\item Conventional CPU-based copies introduce an overhead
+		\item Conventional CPU-facilitated workflow introduces an overhead
 		\item Host memory used for staging (double copying)
-		\item With peer-to-peer transfers, the NVMe can be directly accessed
-		\item Linux user friendly (standardized filesystem)
+		\item Direct access to NVMe storage from accelerator
+		\item Standardized filesystem
 	\end{itemize}
 
 	\vspace{0.4cm}
@@ -107,8 +107,11 @@
 	\begin{columns}[T] 					% columns environment, top placement
 		\begin{column}{0.6\textwidth}	% first column
 			\begin{itemize}
-				\item Switched point-to-point interconnect
-				\item Memory-mapped communication
+				\item Since 2003
+				\item Streaming \& memory-mapped
+				\item Serial-parallel hybrid
+				\item Specification -- Gen7 (242~GBps)
+				\item Devices -- Gen5 (63.015~GBps)
 				\item Support on FPGAs
 			\end{itemize}
 
@@ -136,10 +139,11 @@
 	\begin{columns}[T] 					% columns environment, top placement
 		\begin{column}{0.5\textwidth}	% first column
 			\begin{itemize}
+				\item Switched point-to-point interconnect
 				\item Tree topology
 				\item Root Complex, Switches, Endpoints
-				\item Address-based routing (for our case :)
-				\item Host bypass possible if platform permits P2P
+				\item Address-based routing*
+				\item Peer-to-peer transport (host bypassing)
 				\item Transaction Layer Packet (TLP)
 					\begin{itemize}
 						\item Memory Write request
@@ -147,7 +151,7 @@
 						\item Completion
 					\end{itemize}
 			\end{itemize}
-			\vspace{0.2cm}
+			% \vspace{0.1cm}
 			\centering
 			\includegraphics[width=1.2\columnwidth]{pict/data_units-tlp.pdf}
 		\end{column}
@@ -184,14 +188,37 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}
+	\frametitle{Configuration}
+	\begin{columns}[T] 					% columns environment, top placement
+		\begin{column}{0.4\textwidth}	% first column
+			\begin{itemize}
+				\item Configured on startup
+				\item Bus Mastering
+				\item Base Address Register (BAR)
+				\item Enable memory-mapped IO
+			\end{itemize}
+		\end{column}
+		%
+		\begin{column}{0.6\textwidth}		% second column
+			\centering
+			\includegraphics[width=\columnwidth]{pict/host_topology-with_bars.pdf}
+		\end{column}
+	\end{columns}											% end of the main environment
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
 	\frametitle{Non-volatile Memory Express (NVMe)}
 	\begin{columns}[T] 					% columns environment, top placement
 		\begin{column}{0.5\textwidth}	% first column
 			\begin{itemize}
+				\item Command based
 				\item Queue-pair model: submission and completion queues
-				\item Commands are fetched by controller over PCIe
-				\item Pointers synchronize queue state (doorbells)
-				\item Same protocol used by host and FPGA requesters
+				\item Up to $2^{16}$ queues
+				\item Up to $2^{16}$ commands
+				\item Pointers to synchronize queue state (doorbells)
+				\item Namespace divided to sectors
+				\item Logical Block Address (LBA)
 			\end{itemize}
 		\end{column}
 		%
@@ -207,25 +234,110 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}
-	\frametitle{Implementation overview}
+	\frametitle{Read command}
+	\centering
+	\includegraphics[width=\textwidth]{pict/nvme_prot-read_one.pdf}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Write command}
+	\centering
+	\includegraphics[width=0.95\textwidth]{pict/nvme_prot-write_one.pdf}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Hardware implementation}
 	\begin{columns}[T] 					% columns environment, top placement
 		\begin{column}{0.5\textwidth}	% first column
 			\begin{itemize}
 				\item FPGA card: AMD Alveo U55C
-				\item Core component: DMA Iuventus IP
+				\item Up to PCIe Gen4x16
 				\item Accelerator BARs hold queues and data buffers
-				\item SPDK configures NVMe and queue resources
-				\item Linux ublk exposes mountable block device
-				\item Shared CPU-FPGA access to one filesystem
+				\item DMA Iuventus IP
+				\item Interface to user logic
+				\item Maximum IO size of 256 LBAs
 			\end{itemize}
 		\end{column}
 		%
 		\begin{column}{0.5\textwidth}		% second column
-			% \centering
-			% \includegraphics[width=\columnwidth]{pict/ziti_easy_arch-nvme_design.pdf}
+			% \vspace{1cm}
+			\centering
+			\includegraphics[width=\columnwidth]{pict/dma_iuventus_scheme-simple_arch.pdf}
+		\end{column}
+	\end{columns}											% end of the main environment
+\end{frame}
 
-			% \vspace{0.5cm}
-			% \includegraphics[width=\columnwidth]{pict/ziti_easy_arch-nvme_initialized_system.pdf}
+\begin{frame}
+	\centering
+	\includegraphics[height=0.95\textheight]{pict/ziti_easy_arch-iuventus_memory_scheme.pdf}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Userspace drivers}
+	\begin{columns}[T] 					% columns environment, top placement
+		\begin{column}{0.5\textwidth}	% first column
+			\begin{itemize}
+				\item System calls are expensive
+				\item Kernel development difficult
+				\item More libraries
+				\item Easier debugging
+				\item Storage Performance Development Kit (SPDK)
+				\item Poll mode driver (PMD)
+				\item No interrupts
+				\item Lower latency, higher throughput
+			\end{itemize}
+		\end{column}
+		%
+		\begin{column}{0.5\textwidth}		% second column
+			\vspace{1cm}
+			\centering
+			\includegraphics[width=\columnwidth]{pict/ublk-driver_type.pdf}
+		\end{column}
+	\end{columns}											% end of the main environment
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Filesystem}
+	\begin{columns}[T]
+		\begin{column}{0.4\textwidth}
+			\begin{itemize}
+				\item Everything in kernel
+				\item Block vs.\ character devices
+				\item Only bdevs run filesystem
+			\end{itemize}
+		\end{column}
+		%
+		\begin{column}{0.6\textwidth}
+			% \vspace{1cm}
+			\centering
+			\includegraphics[width=0.8\columnwidth]{pict/ublk-normal_filesystem.pdf}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+	\frametitle{Shared CPU-FPGA filesystem}
+	\begin{columns}[T] 					% columns environment, top placement
+		\begin{column}{0.4\textwidth}	% first column
+			\begin{enumerate}
+				\item Keep userspace drivers
+				\item Create block device
+				\item Publish bdev to the kernel
+				\item Initialize filesystem (exFAT)
+				\item Mount filesystem
+				\item Forward IO requests to the ublk server
+			\end{enumerate}
+		\end{column}
+		%
+		\begin{column}{0.6\textwidth}		% second column
+			\vspace{0.5cm}
+			\centering
+			\includegraphics[width=\columnwidth]{pict/ublk-app.pdf}
 		\end{column}
 	\end{columns}											% end of the main environment
 \end{frame}
@@ -290,31 +402,23 @@
 		% \caption[Latency measurement results]{Results of latency measurement for different operations,
 		% request sizes and access pattern (\si{\micro\second})}
 		% \label{tab:latency-results}
-		\begin{tabular}{lllSSSSSS@{}}
+		\begin{tabular}{lllSSSSS@{}}
 			\toprule
 			\textbf{Op.} & \textbf{Access} & \textbf{Size} & {\textbf{Min}} &
-			{\boldmath $P_{50}$} & {\boldmath $P_{80}$} & {\boldmath $P_{99}$} & {\textbf{Max}} \\
-			& & {[LBAs]} & & & & & & \\
+			{\boldmath $P_{50}$} &  {\boldmath $P_{99}$} & {\textbf{Max}} \\
+			& & {[LBAs]} & & & & & \\
 			\midrule
-			RD  & Random     &   1 &  46.64 &  66.71 &  78.65 &  81.75 & 1952.72 \\
-				% &            &   8 &  47.81 &  65.54 &  70.30 &  80.40 &  82.88 & 1840.14 \\
-				% &            &  64 &  86.90 & 111.77 & 130.60 & 143.96 & 149.33 & 1665.92 \\
-				&            & 256 & 143.27 & 203.46 & 220.98 & 238.26 & 357.50 \\
+			RD  & Random     &   1 &  46.64 &  66.71 &    81.75 & 1952.72 \\
+				&            & 256 & 143.27 & 203.46 &  238.26 & 357.50 \\
 			\addlinespace
-				& Sequential &   1 &  62.12 &  63.15 &  64.83 &  65.97 & 173.30 \\
-				% &            &   8 &  47.80 &  48.73 &  67.89 &  80.66 &  82.97 & 1951.48 \\
-				% &            &  64 &  85.98 & 111.33 & 130.51 & 143.87 & 148.51 & 2029.71 \\
-				&            & 256 & 144.12 & 201.50 & 218.77 & 237.61 & 1904.40 \\
+				& Sequential &   1 &  62.12 &  63.15 &   65.97 & 173.30 \\
+				&            & 256 & 144.12 & 201.50 &  237.61 & 1904.40 \\
 			\midrule
-			WR  & Random     &   1 &   8.34 &    8.61 &   9.07 & 107.28 & 5379.27 \\
-				% &            &   8 &   9.50 &   9.77 &  10.26 &  26.65 &  88.71 & 5385.86 \\
-				% &            &  64 &  19.70 &  19.69 &  20.41 &  23.91 & 139.18 & 5633.68 \\
-				&            & 256 &  54.05 &   62.65 &  69.77 & 454.14 & 6692.82 \\
+			WR  & Random     &   1 &   8.34 &    8.61 &   107.28 & 5379.27 \\
+				&            & 256 &  54.05 &   62.65 &   454.14 & 6692.82 \\
 			\addlinespace
-				& Sequential &   1 &   8.34 &     8.45 &   8.60 &   8.70 &  10.19 \\
-				% &            &   8 &   9.56 &   9.77 &  10.18 &  64.46 & 301.59 & 5949.84 \\
-				% &            &  64 &  19.71 &  19.65 &  20.44 &  78.26 & 405.75 & 6499.20 \\
-				&            & 256 &  54.10 &   71.57 &  90.12 & 251.26 & 5860.76 \\
+				& Sequential &   1 &   8.34 &     8.45 &     8.70 &  10.19 \\
+				&            & 256 &  54.10 &   71.57 &   251.26 & 5860.76 \\
 			\bottomrule
 		\end{tabular}
 	% \end{table}
@@ -323,20 +427,21 @@
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{frame}
-	\vspace{1cm}
-	\textbf{Next step:} live demo of end-to-end shared read/write access.
+\begin{frame}[c]
+	\begin{block}{Demo}
+		Shared read/write filesystem access.
+	\end{block}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}
 	\frametitle{Conclusion}
 	\begin{itemize}
+		\item PCIe peer-to-peer path avoids host-memory staging
+		\item Linux filesystem access is maintained
 		\item Design verified using functional verification (CocoTB)
 		\item Validated in hardware
-		\item Shared CPU-FPGA filesystem access over NVMe was demonstrated
-		\item PCIe peer-to-peer path avoids mandatory host-memory staging
-		\item Linux filesystem access is maintained
+		\item Shared CPU-FPGA filesystem access to NVMe is operational
 		\item Future development
 			\begin{itemize}
 				\item More outstanding commands
@@ -349,14 +454,18 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{frame}[c]
-% no frametitle
-	\frametitle{\mbox{ }}
 	\begin{center}
 		{\Huge Thank you for your attention!}
 
 		\vspace{1cm}	              % horizontal space
 		{\Large Any questions?}
 	\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[noframenumbering]
+	\frametitle{DMA Iuventus architecture}
+	\includegraphics[width=\textwidth]{pict/dma_iuventus_scheme.pdf}
 \end{frame}
 \end{document}
 
